@@ -46,3 +46,9 @@ next-env.d.ts
 
 # browser automation screenshots/snapshots
 /.playwright-mcp
+
+# uploaded originals (local document storage)
+/storage
+
+# generated synthetic test documents (pnpm samples)
+/samples

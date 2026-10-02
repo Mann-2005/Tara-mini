@@ -17,15 +17,20 @@
     "db:reset": "prisma migrate reset",
     "test": "vitest run",
     "test:watch": "vitest",
-    "gaps": "tsx scripts/gap-report.ts"
+    "gaps": "tsx scripts/gap-report.ts",
+    "samples": "tsx scripts/make-samples.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.87",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
+    "ai": "^7.0.127",
     "next": "15.5.27",
     "pg": "^8.23.1",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "unpdf": "^1.8.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -37,6 +42,7 @@
     "dotenv": "^18.0.5",
     "eslint": "^9",
     "eslint-config-next": "15.5.27",
+    "pdf-lib": "^1.17.1",
     "prisma": "7.10.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",

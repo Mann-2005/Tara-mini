@@ -57,8 +57,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <div className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-6 border-b border-rule py-8">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold text-stamp">Tara Mini</p>
-          <h1 className="mt-2 text-3xl leading-tight font-semibold text-balance sm:text-4xl">
+          <h1 className="text-3xl leading-tight font-semibold text-balance sm:text-4xl">
             What&rsquo;s missing as of {longDate(asOf)}
           </h1>
           {report.clients.length > 0 && (

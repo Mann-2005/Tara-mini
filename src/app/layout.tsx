@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fira_Sans } from "next/font/google";
+import { Nav } from "./_components/Nav";
 import "./globals.css";
 
 // Fira Sans: Spiekermann's humanist sans with tabular figures, at home in a German office tool.
@@ -17,7 +18,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${fira.variable} font-sans antialiased`}>{children}</body>
+      <body className={`${fira.variable} font-sans antialiased`}>
+        <Nav />
+        {children}
+      </body>
     </html>
   );
 }
