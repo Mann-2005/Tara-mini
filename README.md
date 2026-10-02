@@ -28,3 +28,20 @@ pnpm dev                # http://localhost:3000
 | `pnpm db:down`    | Stop it (data persists in a Docker volume) |
 | `pnpm db:migrate` | Create/apply migrations (`prisma migrate dev`) |
 | `pnpm db:studio`  | Browse the database in Prisma Studio      |
+| `pnpm db:seed`    | Seed 5 clients, obligation types, obligations Jul–Sep 2026 and a document history (idempotent; `SEED_AS_OF=YYYY-MM-DD` to change the anchor) |
+| `pnpm db:reset`   | Drop and recreate the schema, re-apply migrations (then run `pnpm db:seed`) |
+
+## Architecture
+
+```
+src/domain/      pure, deterministic logic — no Prisma, no I/O, no LLM
+  calendar/      ISO dates, German public holidays per state, working days (§108 AO)
+  obligations/   due-date rule interpreter, obligation generator
+src/server/      database-side services (audit log, obligation sync)
+src/ai/          (step 5) LLM classification — proposals only
+prisma/          schema, migrations (incl. GoBD triggers), seed
+```
+
+**GoBD:** nothing is ever hard-deleted. Postgres triggers reject `DELETE`/`TRUNCATE`
+on all domain tables, any `UPDATE` on `AuditEvent`, and edits to classifications
+(other than the one-time confirmation). Use status / revocation fields instead.

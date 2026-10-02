@@ -1,7 +1,19 @@
 // Tara Mini data model.
-// Step 1: a minimal Client table that proves the migration pipeline works.
-// The full model (obligations, documents, classifications, audit log) is
-// designed in step 2.
+//
+// Design principles (see README / step-2 notes):
+// - Obligation *rules* live in ObligationType as data; one generic, pure
+//   TypeScript interpreter (src/domain/obligations) turns them into Obligation
+//   rows. No per-type code.
+// - Stored status only holds facts that time cannot derive (OPEN/COMPLETE/
+//   WAIVED). "Overdue" / "due soon" are derived by the gap engine from an
+//   as-of date, so results are deterministic.
+// - LLM output is never authoritative: DocumentClassification rows are
+//   immutable proposals; a human confirms one (or adds a corrected HUMAN row).
+// - GoBD: nothing is hard-deleted. All relations use onDelete: Restrict, and
+//   the migration adds Postgres triggers that block DELETE on domain tables
+//   and any UPDATE/DELETE on AuditEvent.
+// - Calendar dates (periods, due dates, document dates) are @db.Date, never
+//   timestamps, to avoid Europe/Berlin vs UTC off-by-one errors.
 
 generator client {
   provider = "prisma-client"
@@ -12,11 +24,287 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+/// How often the client files an Umsatzsteuervoranmeldung.
+/// NONE = no advance returns (e.g. VAT-exempt business or Kleinunternehmer).
+enum VatFilingFrequency {
+  MONTHLY
+  QUARTERLY
+  NONE
+}
+
+/// German federal states (Bundesländer). Public holidays differ per state,
+/// which matters for the "next working day" deadline rule (§108 Abs. 3 AO).
+enum FederalState {
+  BW // Baden-Württemberg
+  BY // Bayern
+  BE // Berlin
+  BB // Brandenburg
+  HB // Bremen
+  HH // Hamburg
+  HE // Hessen
+  MV // Mecklenburg-Vorpommern
+  NI // Niedersachsen
+  NW // Nordrhein-Westfalen
+  RP // Rheinland-Pfalz
+  SL // Saarland
+  SN // Sachsen
+  ST // Sachsen-Anhalt
+  SH // Schleswig-Holstein
+  TH // Thüringen
+}
+
+/// Who owes the obligation.
+enum ObligationKind {
+  /// The client owes documents to the firm (Kontoauszüge, Belege, Lohndaten).
+  CLIENT_DELIVERY
+  /// The firm owes a filing to the Finanzamt (e.g. UStVA). Fulfilled by
+  /// uploading the ELSTER transmission receipt.
+  FIRM_FILING
+}
+
+/// Which clients an ObligationType applies to.
+enum Applicability {
+  ALWAYS
+  VAT_REGISTERED // client.vatFilingFrequency != NONE
+  HAS_PAYROLL // client.hasPayroll
+}
+
+/// How periods are cut for an ObligationType.
+enum Recurrence {
+  MONTHLY
+  QUARTERLY
+  ANNUAL // aligned to the client's fiscal year
+  FOLLOWS_VAT_FREQUENCY // monthly or quarterly depending on the client
+}
+
+/// Stored obligation status: only facts a human/system decided.
+/// Overdue / due soon / partially received are DERIVED, never stored.
+enum ObligationStatus {
+  OPEN
+  COMPLETE
+  WAIVED // staff decided it does not apply for this period (with reason in audit log)
+}
+
+enum DocumentStatus {
+  PENDING // uploaded, not yet classified
+  PROPOSED // LLM proposal exists, awaiting human review
+  CONFIRMED // a human confirmed a classification
+  REJECTED // a human rejected the document (wrong/unusable); kept, never deleted
+}
+
+enum DocumentType {
+  INCOMING_INVOICE // Eingangsrechnung
+  OUTGOING_INVOICE // Ausgangsrechnung
+  RECEIPT // Quittung / Kassenbeleg
+  BANK_STATEMENT // Kontoauszug
+  PAYROLL_DATA // Lohndaten (hours, changes, sick days …)
+  ELSTER_RECEIPT // ELSTER Übermittlungsprotokoll (proof of filing)
+  OTHER
+}
+
+enum ClassificationSource {
+  LLM // proposal produced by the model
+  HUMAN // a correction entered by staff
+}
+
+// ─── Models ─────────────────────────────────────────────────────────────────
+
 /// A client business (Mandant) served by the tax advisory firm.
 model Client {
-  id           String   @id @default(uuid())
+  id           String @id @default(uuid())
   name         String
-  /// The firm's internal client number (Mandantennummer). Unique per firm.
-  clientNumber String   @unique
-  createdAt    DateTime @default(now())
+  /// The firm's internal client number (Mandantennummer).
+  clientNumber String @unique
+
+  /// Month (1–12) in which the fiscal year (Wirtschaftsjahr) ends.
+  /// ASSUMPTION: the Wirtschaftsjahr always ends on the last day of a month,
+  /// so the month is sufficient. Calendar-year businesses use 12.
+  fiscalYearEndMonth         Int
+  vatFilingFrequency         VatFilingFrequency
+  hasPayroll                 Boolean
+  /// Dauerfristverlängerung (§§46–48 UStDV): UStVA deadline is one month later.
+  hasDauerfristverlaengerung Boolean
+  /// Determines which public holidays apply to deadlines.
+  /// ASSUMPTION: the client's state equals the state of its Finanzamt.
+  federalState               FederalState
+  /// Clients are deactivated, never deleted (GoBD).
+  isActive                   Boolean            @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  obligations Obligation[]
+  documents   Document[]
+}
+
+/// A recurring requirement, described entirely as data.
+/// src/domain/obligations interprets these fields; there is no per-type code.
+model ObligationType {
+  id          String         @id @default(uuid())
+  /// Stable machine code, e.g. USTVA, LOHN, KONTOAUSZUEGE, EINGANGSRECHNUNGEN.
+  code        String         @unique
+  name        String
+  description String
+  kind        ObligationKind
+  appliesWhen Applicability
+  recurrence  Recurrence
+
+  // Due-date rule:
+  //   base = day `dueDayOfMonth` of the month that is
+  //          `dueMonthsAfterPeriodEnd` (+ `dauerfristExtensionMonths` if the
+  //          client has Dauerfristverlängerung) months after the period's
+  //          end month; then optionally rolled forward to the next working day.
+  /// 0 = same month as the period end, 1 = following month, …
+  dueMonthsAfterPeriodEnd   Int
+  dueDayOfMonth             Int
+  /// Extra months granted by Dauerfristverlängerung (0 if not affected).
+  dauerfristExtensionMonths Int     @default(0)
+  /// Move deadlines on weekends/holidays to the next working day (§108 Abs. 3 AO).
+  rollForwardToWorkingDay   Boolean @default(true)
+
+  // Fulfilment rule:
+  /// Which confirmed document types can fulfil this obligation.
+  acceptedDocumentTypes    DocumentType[]
+  /// How many confirmed documents are needed before it counts as received.
+  minDocuments             Int            @default(1)
+  /// If true, reaching minDocuments is not enough: staff must close it
+  /// (e.g. Eingangsrechnungen — the firm can't know when "all" have arrived).
+  requiresManualCompletion Boolean        @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  obligations Obligation[]
+}
+
+/// One instance of an ObligationType for one Client for one period.
+model Obligation {
+  id               String           @id @default(uuid())
+  clientId         String
+  obligationTypeId String
+  periodStart      DateTime         @db.Date
+  periodEnd        DateTime         @db.Date
+  /// Materialised by the pure due-date function at generation time.
+  dueDate          DateTime         @db.Date
+  status           ObligationStatus @default(OPEN)
+  completedAt      DateTime?
+  completedBy      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client         Client                 @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  obligationType ObligationType         @relation(fields: [obligationTypeId], references: [id], onDelete: Restrict)
+  fulfilments    ObligationFulfilment[]
+
+  /// Makes generation idempotent: one obligation per client/type/period.
+  @@unique([clientId, obligationTypeId, periodStart])
+  @@index([dueDate, status])
+  @@index([clientId, status])
+}
+
+/// An uploaded file. Never deleted; rejected documents keep status REJECTED.
+model Document {
+  id          String         @id @default(uuid())
+  /// The client (Mandant) who sent this document.
+  clientId    String
+  filename    String
+  mimeType    String
+  /// Where the file bytes are stored (local path / object key).
+  storagePath String
+  /// SHA-256 of the file bytes: integrity proof (GoBD) and duplicate detection.
+  sha256      String
+  sizeBytes   Int
+  uploadedAt  DateTime       @default(now())
+  uploadedBy  String
+  rawText     String?        @db.Text
+  status      DocumentStatus @default(PENDING)
+
+  client          Client                   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  classifications DocumentClassification[]
+  fulfilments     ObligationFulfilment[]
+
+  @@index([clientId, status])
+  @@index([sha256])
+}
+
+/// A classification of a Document. Rows are immutable once written, except
+/// that confirmedBy/confirmedAt are set once when a human accepts the row.
+///
+/// - source = LLM:   the model's proposal (confidence, modelUsed set)
+/// - source = HUMAN: a staff correction; supersedesId points to the LLM row
+/// Exactly one classification per document ends up confirmed. Accuracy is
+/// measured by comparing each LLM row with the document's confirmed row.
+model DocumentClassification {
+  id           String               @id @default(uuid())
+  documentId   String
+  source       ClassificationSource
+  documentType DocumentType
+  documentDate DateTime?            @db.Date
+  amount       Decimal?             @db.Decimal(12, 2)
+  vatAmount    Decimal?             @db.Decimal(12, 2)
+  currency     String               @default("EUR")
+  counterparty String?
+  /// Model's self-reported confidence 0..1 (LLM rows only).
+  confidence   Float?
+  /// Model identifier (LLM rows only).
+  modelUsed    String?
+  /// For HUMAN corrections: the LLM proposal this replaces.
+  supersedesId String?
+  createdBy    String
+  createdAt    DateTime             @default(now())
+  confirmedBy  String?
+  confirmedAt  DateTime?
+
+  document    Document                 @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  supersedes  DocumentClassification?  @relation("Correction", fields: [supersedesId], references: [id], onDelete: Restrict)
+  correctedBy DocumentClassification[] @relation("Correction")
+  fulfilments ObligationFulfilment[]
+
+  @@index([documentId])
+  @@index([source, documentType])
+}
+
+/// Links a confirmed Document to the Obligation it satisfies.
+/// Undone by setting revokedAt (never deleted).
+model ObligationFulfilment {
+  id               String    @id @default(uuid())
+  obligationId     String
+  documentId       String
+  /// The confirmed classification that justified this link.
+  classificationId String
+  createdBy        String
+  createdAt        DateTime  @default(now())
+  revokedAt        DateTime?
+  revokedBy        String?
+  revokeReason     String?
+
+  obligation     Obligation             @relation(fields: [obligationId], references: [id], onDelete: Restrict)
+  document       Document               @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  classification DocumentClassification @relation(fields: [classificationId], references: [id], onDelete: Restrict)
+
+  @@unique([obligationId, documentId])
+  @@index([documentId])
+}
+
+/// Append-only log of every state change (GoBD traceability).
+/// The database rejects UPDATE and DELETE on this table (see migration).
+model AuditEvent {
+  id         String   @id @default(uuid())
+  occurredAt DateTime @default(now())
+  /// Who did it. Free text until there is a User model, by convention:
+  /// "staff:<name>", "system:<process>", "llm:<model>".
+  actor      String
+  /// What happened, e.g. "obligation.created", "classification.confirmed".
+  action     String
+  entityType String
+  entityId   String
+  oldValue   Json?
+  newValue   Json?
+  reason     String?
+
+  @@index([entityType, entityId])
+  @@index([occurredAt])
 }
