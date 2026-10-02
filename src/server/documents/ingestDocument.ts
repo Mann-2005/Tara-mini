@@ -165,6 +165,10 @@ function describeError(error: unknown): string {
   if (!(error instanceof Error)) return "Classification failed for an unknown reason.";
   if (error.message.includes("GOOGLE_GENERATIVE_AI_API_KEY")) return error.message;
   if (error.message.startsWith("Integrity check failed")) return error.message;
+  // Free tier: a handful of requests per minute. Common, and fixed by waiting.
+  if (/quota|rate limit|429|RESOURCE_EXHAUSTED/i.test(error.message)) {
+    return "Gemini's rate limit was reached (the free tier allows only a few requests per minute). Wait a minute, then press Retry.";
+  }
   switch (error.name) {
     case "AI_NoObjectGeneratedError":
     case "AI_NoOutputGeneratedError":
