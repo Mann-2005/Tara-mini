@@ -29,6 +29,8 @@ pnpm dev                # http://localhost:3000
 | `pnpm db:migrate` | Create/apply migrations (`prisma migrate dev`) |
 | `pnpm db:studio`  | Browse the database in Prisma Studio      |
 | `pnpm db:seed`    | Seed 5 clients, obligation types, obligations Jul–Sep 2026 and a document history (idempotent; `SEED_AS_OF=YYYY-MM-DD` to change the anchor) |
+| `pnpm test`       | Run the Vitest unit tests (pure domain logic, no database needed) |
+| `pnpm gaps [date]` | Print the gap report for the database, as of today (Europe/Berlin) or a given YYYY-MM-DD |
 | `pnpm db:reset`   | Drop and recreate the schema, re-apply migrations (then run `pnpm db:seed`) |
 
 ## Architecture
@@ -36,7 +38,8 @@ pnpm dev                # http://localhost:3000
 ```
 src/domain/      pure, deterministic logic — no Prisma, no I/O, no LLM
   calendar/      ISO dates, German public holidays per state, working days (§108 AO)
-  obligations/   due-date rule interpreter, obligation generator
+  obligations/   due-date rule interpreter, obligation generator, standard types
+  gaps/          gap engine: computeGaps({asOf, clients, obligations}) → per-client RAG + gaps
 src/server/      database-side services (audit log, obligation sync)
 src/ai/          (step 5) LLM classification — proposals only
 prisma/          schema, migrations (incl. GoBD triggers), seed

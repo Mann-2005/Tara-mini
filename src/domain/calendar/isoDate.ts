@@ -67,3 +67,8 @@ export function isoDateToDb(date: IsoDate): Date {
 export function dbToIsoDate(date: Date): IsoDate {
   return date.toISOString().slice(0, 10);
 }
+
+/** Whole calendar days from `from` to `to` (negative if `to` is earlier). */
+export function daysBetween(from: IsoDate, to: IsoDate): number {
+  return Math.round((isoDateToDb(to).getTime() - isoDateToDb(from).getTime()) / 86_400_000);
+}
