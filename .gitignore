@@ -43,3 +43,6 @@ next-env.d.ts
 
 # prisma generated client
 /src/generated
+
+# browser automation screenshots/snapshots
+/.playwright-mcp

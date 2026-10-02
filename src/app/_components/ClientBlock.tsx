@@ -1,0 +1,96 @@
+// One client on the dashboard: client-owed deliveries on the left,
+// the firm's own work (filings, closing periods) on the right.
+
+import type { ClientGaps, Gap, Rag } from "@/domain/gaps/gapEngine";
+import { dueText, gapAction, periodLabel, shortDate } from "../_lib/format";
+
+const RULE: Record<Rag, string> = {
+  RED: "border-l-red",
+  AMBER: "border-l-amber",
+  GREEN: "border-l-green",
+};
+
+const DUE_COLOUR: Record<Rag, string> = {
+  RED: "text-red",
+  AMBER: "text-amber",
+  GREEN: "text-ink-muted",
+};
+
+// Shape as well as colour, so severity survives greyscale and colour blindness.
+const MARKER: Record<Rag, string> = {
+  RED: "bg-red",
+  AMBER: "bg-amber rotate-45 scale-90",
+  GREEN: "border-2 border-green",
+};
+
+function countsLine({ overdue, dueSoon }: ClientGaps["counts"]): string {
+  const parts = [];
+  if (overdue) parts.push(`${overdue} overdue`);
+  if (dueSoon) parts.push(`${dueSoon} due soon`);
+  return parts.join(", ");
+}
+
+function GapRow({ gap }: { gap: Gap }) {
+  const { title, detail } = gapAction(gap);
+  // Upcoming items stay visible but quiet, so overdue and due-soon rows carry the weight.
+  const quiet = gap.severity === "GREEN";
+  return (
+    <li className={`flex gap-3 py-2.5 ${quiet ? "text-ink-muted" : ""}`}>
+      <span aria-hidden className={`mt-1.5 size-2.5 shrink-0 ${MARKER[gap.severity]}`} />
+      <div className="min-w-0 flex-1">
+        <p className={`leading-snug ${quiet ? "" : "font-medium text-ink"}`}>
+          {title} <span className="font-normal text-ink-muted">for {periodLabel(gap.periodStart, gap.periodEnd)}</span>
+        </p>
+        <p className="text-sm text-ink-muted">{detail}</p>
+      </div>
+      <div className="shrink-0 text-right text-sm">
+        <p className={`font-medium ${DUE_COLOUR[gap.severity]}`}>{dueText(gap.daysUntilDue)}</p>
+        <p className="text-ink-muted">{shortDate(gap.dueDate)}</p>
+      </div>
+    </li>
+  );
+}
+
+function Column({ heading, gaps, empty, firm }: { heading: string; gaps: Gap[]; empty: string; firm?: boolean }) {
+  return (
+    <div className={firm ? "bg-stamp-wash px-4 py-3 sm:px-5" : "px-4 py-3 sm:px-5"}>
+      <h4 className={`text-sm font-semibold ${firm ? "text-stamp" : "text-ink-muted"}`}>{heading}</h4>
+      {gaps.length === 0 ? (
+        <p className="py-2.5 text-sm text-ink-muted">{empty}</p>
+      ) : (
+        <ul className="divide-y divide-rule">
+          {gaps.map((g) => (
+            <GapRow key={g.obligationId} gap={g} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function ClientBlock({ client }: { client: ClientGaps }) {
+  // Engine order (most urgent first) is preserved within each column.
+  const clientOwes = client.gaps.filter((g) => g.owner === "CLIENT");
+  const firmOwes = client.gaps.filter((g) => g.owner === "FIRM");
+  const counts = countsLine(client.counts);
+
+  return (
+    <article className={`border border-l-4 border-rule bg-sheet ${RULE[client.rag]}`}>
+      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule px-4 py-3 sm:px-5">
+        <h3 className="text-lg font-semibold">
+          {client.name} <span className="text-sm font-normal text-ink-muted">Client {client.clientNumber}</span>
+        </h3>
+        {counts && <p className={`text-sm font-medium ${DUE_COLOUR[client.rag]}`}>{counts}</p>}
+      </header>
+
+      {client.gaps.length === 0 ? (
+        <p className="px-4 py-3 text-sm text-ink-muted sm:px-5">Everything is in. No open obligations.</p>
+      ) : (
+        <div className="grid md:grid-cols-2">
+          <Column heading="Client owes" gaps={clientOwes} empty="Nothing outstanding from the client." />
+          <Column heading="Firm to do" gaps={firmOwes} empty="Nothing for the firm right now." firm />
+        </div>
+      )}
+    </article>
+  );
+}

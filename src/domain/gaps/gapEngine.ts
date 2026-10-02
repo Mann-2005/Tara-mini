@@ -70,6 +70,8 @@ export interface Gap {
   obligationId: string;
   typeCode: string;
   typeName: string;
+  /** CLIENT_DELIVERY (client owes documents) or FIRM_FILING (firm owes a filing). */
+  kind: ObligationKind;
   periodStart: IsoDate;
   periodEnd: IsoDate;
   dueDate: IsoDate;
@@ -201,6 +203,7 @@ export function computeGaps(input: GapInput): GapReport {
         obligationId: o.id,
         typeCode: o.typeCode,
         typeName: o.typeName,
+        kind: o.kind,
         periodStart: o.periodStart,
         periodEnd: o.periodEnd,
         dueDate: o.dueDate,
