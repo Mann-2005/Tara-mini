@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import Link from "next/link";
 import { DOCUMENT_TYPE_LABELS, formatMoney } from "../_lib/labels";
 import { uploadDocument, type UploadState } from "./actions";
 
@@ -68,6 +69,11 @@ function Result({ state }: { state: UploadState }) {
               </div>
             ))}
           </dl>
+          <p className="border-t border-rule px-4 py-3">
+            <Link href={`/review/${state.documentId}`} className="font-medium text-stamp underline underline-offset-2">
+              Review it now
+            </Link>
+          </p>
         </div>
       );
     }

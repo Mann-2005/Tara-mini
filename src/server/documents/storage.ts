@@ -48,3 +48,13 @@ export async function readOriginal(relativePath: string, expectedSha256: string)
   }
   return bytes;
 }
+
+/** Whether the original file is on disk (seed documents have none). */
+export async function originalExists(relativePath: string): Promise<boolean> {
+  try {
+    await access(path.join(storageRoot(), relativePath));
+    return true;
+  } catch {
+    return false;
+  }
+}

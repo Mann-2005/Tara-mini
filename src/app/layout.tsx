@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fira_Sans } from "next/font/google";
+import { db } from "@/lib/db";
 import { Nav } from "./_components/Nav";
 import "./globals.css";
 
@@ -15,11 +16,12 @@ export const metadata: Metadata = {
   description: "What each client still owes the firm, and by when",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const reviewCount = await db.document.count({ where: { status: "PROPOSED" } });
   return (
     <html lang="en">
       <body className={`${fira.variable} font-sans antialiased`}>
-        <Nav />
+        <Nav reviewCount={reviewCount} />
         {children}
       </body>
     </html>

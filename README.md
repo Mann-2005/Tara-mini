@@ -30,6 +30,7 @@ pnpm dev                # http://localhost:3000
 | `pnpm db:studio`  | Browse the database in Prisma Studio      |
 | `pnpm db:seed`    | Seed 5 clients, obligation types, obligations Jul–Sep 2026 and a document history (idempotent; `SEED_AS_OF=YYYY-MM-DD` to change the anchor) |
 | `pnpm test`       | Run the Vitest unit tests (pure domain logic, no database needed) |
+| `pnpm test:db`    | Integration tests against the separate `tara_mini_test` database (schema rebuilt from migrations each run) |
 | `pnpm gaps [date]` | Print the gap report for the database, as of today (Europe/Berlin) or a given YYYY-MM-DD |
 | `pnpm samples`    | Generate synthetic sample PDFs in `./samples` for testing uploads |
 | `pnpm db:reset`   | Drop and recreate the schema, re-apply migrations (then run `pnpm db:seed`) |
@@ -43,6 +44,7 @@ src/domain/      pure, deterministic logic — no Prisma, no I/O, no LLM
   gaps/          gap engine: computeGaps({asOf, clients, obligations}) → per-client RAG + gaps
 src/server/      database-side services (audit log, obligation sync)
 src/ai/          LLM classification (Gemini via Vercel AI SDK): strict Zod schema, proposals only
+src/server/review/     human review: confirm, correct (new HUMAN row), reject, link obligation
 src/server/documents/  upload pipeline: validate → store (SHA-256) → extract text → LLM → proposal
 prisma/          schema, migrations (incl. GoBD triggers), seed
 ```

@@ -18,6 +18,7 @@ import { daysInMonth, dbToIsoDate, isoDateToDb, parseIsoMonth, toIsoDate, type I
 import { lastFullMonths } from "../src/domain/obligations/generate";
 import { STANDARD_OBLIGATION_TYPES } from "../src/domain/obligations/standardTypes";
 import { writeAudit } from "../src/server/audit";
+import { completeObligation } from "../src/server/obligations/completeObligation";
 import { syncObligations } from "../src/server/obligations/syncObligations";
 
 const ACTOR = "system:seed";
@@ -385,17 +386,10 @@ async function seedDocument(doc: SeedDoc, clientIds: Map<string, string>) {
     const type = obligation.obligationType;
     const count = await tx.obligationFulfilment.count({ where: { obligationId: obligation.id, revokedAt: null } });
     if (!type.requiresManualCompletion && count >= type.minDocuments) {
-      await completeObligation(tx, obligation.id, uploadedAt, "Minimum confirmed documents received");
+      await completeObligation(tx, obligation.id, ACTOR, uploadedAt, "Minimum confirmed documents received");
     }
   });
   return true;
-}
-
-async function completeObligation(tx: Prisma.TransactionClient, obligationId: string, at: Date, reason: string) {
-  const current = await tx.obligation.findUniqueOrThrow({ where: { id: obligationId } });
-  if (current.status !== "OPEN") return;
-  await tx.obligation.update({ where: { id: obligationId }, data: { status: "COMPLETE", completedAt: at, completedBy: ACTOR } });
-  await writeAudit(tx, { actor: ACTOR, action: "obligation.statusChanged", entityType: "Obligation", entityId: obligationId, oldValue: { status: "OPEN" }, newValue: { status: "COMPLETE" }, reason });
 }
 
 async function main() {
@@ -426,7 +420,7 @@ async function main() {
         where: { fulfilments: { some: { obligationId: obligation.id } } },
         orderBy: { uploadedAt: "desc" },
       });
-      await db.$transaction((tx) => completeObligation(tx, obligation.id, lastUpload?.uploadedAt ?? new Date(), "Period closed by staff: all invoices received"));
+      await db.$transaction((tx) => completeObligation(tx, obligation.id, ACTOR, lastUpload?.uploadedAt ?? new Date(), "Period closed by staff: all invoices received"));
     }
   } else {
     console.log("\n(Non-default SEED_AS_OF: scripted documents skipped; obligations only.)");

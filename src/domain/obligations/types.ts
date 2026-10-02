@@ -45,11 +45,13 @@ export interface ObligationSpec {
 
 export type ObligationKind = "CLIENT_DELIVERY" | "FIRM_FILING";
 export type ObligationStatus = "OPEN" | "COMPLETE" | "WAIVED";
-export type DocumentType =
-  | "INCOMING_INVOICE"
-  | "OUTGOING_INVOICE"
-  | "RECEIPT"
-  | "BANK_STATEMENT"
-  | "PAYROLL_DATA"
-  | "ELSTER_RECEIPT"
-  | "OTHER";
+export const DOCUMENT_TYPES = [
+  "INCOMING_INVOICE",
+  "OUTGOING_INVOICE",
+  "RECEIPT",
+  "BANK_STATEMENT",
+  "PAYROLL_DATA",
+  "ELSTER_RECEIPT",
+  "OTHER",
+] as const;
+export type DocumentType = (typeof DOCUMENT_TYPES)[number];

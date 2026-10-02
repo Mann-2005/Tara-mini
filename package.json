@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "gaps": "tsx scripts/gap-report.ts",
-    "samples": "tsx scripts/make-samples.ts"
+    "samples": "tsx scripts/make-samples.ts",
+    "test:db": "vitest run --config vitest.db.config.mts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.87",

@@ -8,16 +8,9 @@
 
 import { z } from "zod";
 import { parseIsoDate } from "@/domain/calendar/isoDate";
+import { DOCUMENT_TYPES } from "@/domain/obligations/types";
 
-export const DOCUMENT_TYPES = [
-  "INCOMING_INVOICE",
-  "OUTGOING_INVOICE",
-  "RECEIPT",
-  "BANK_STATEMENT",
-  "PAYROLL_DATA",
-  "ELSTER_RECEIPT",
-  "OTHER",
-] as const;
+export { DOCUMENT_TYPES };
 
 function isIsoDate(value: string): boolean {
   try {
