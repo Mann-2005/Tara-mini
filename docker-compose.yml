@@ -1,0 +1,24 @@
+# Local Postgres for development.
+# Host port 5433 (not 5432) so it never collides with a Postgres you may
+# already have installed on Windows.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tara-mini-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tara
+      POSTGRES_PASSWORD: tara
+      POSTGRES_DB: tara_mini
+    ports:
+      - "5433:5432"
+    volumes:
+      - tara-mini-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tara -d tara_mini"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  tara-mini-pgdata:

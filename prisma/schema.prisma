@@ -1,0 +1,22 @@
+// Tara Mini data model.
+// Step 1: a minimal Client table that proves the migration pipeline works.
+// The full model (obligations, documents, classifications, audit log) is
+// designed in step 2.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// A client business (Mandant) served by the tax advisory firm.
+model Client {
+  id           String   @id @default(uuid())
+  name         String
+  /// The firm's internal client number (Mandantennummer). Unique per firm.
+  clientNumber String   @unique
+  createdAt    DateTime @default(now())
+}
