@@ -45,6 +45,7 @@ src/domain/      pure, deterministic logic — no Prisma, no I/O, no LLM
 src/server/      database-side services (audit log, obligation sync)
 src/ai/          LLM classification (Gemini via Vercel AI SDK): strict Zod schema, proposals only
 src/server/review/     human review: confirm, correct (new HUMAN row), reject, link obligation
+src/domain/accuracy/   accuracy: LLM proposal vs confirmed truth, per document, field, type, confidence band
 src/server/documents/  upload pipeline: validate → store (SHA-256) → extract text → LLM → proposal
 prisma/          schema, migrations (incl. GoBD triggers), seed
 ```

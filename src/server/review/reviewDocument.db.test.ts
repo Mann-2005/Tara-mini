@@ -224,3 +224,24 @@ describe("reject", () => {
     await expect(rejectDocument(db, { documentId: s.document.id, actor: ACTOR, reason: " " })).rejects.toThrow(ReviewError);
   });
 });
+
+describe("accuracy pairs (loadReviewedPairs)", () => {
+  it("pairs each reviewed document's LLM proposal with its confirmed truth", async () => {
+    const { loadReviewedPairs } = await import("../accuracy/loadAccuracy");
+    const asIs = await scenario(STATEMENT);
+    await confirmDocument(db, { documentId: asIs.document.id, actor: ACTOR, fields: STATEMENT, obligationId: null, closePeriod: false });
+    const fixed = await scenario({ ...KRAEMER, documentType: "RECEIPT" });
+    await confirmDocument(db, { documentId: fixed.document.id, actor: ACTOR, fields: KRAEMER, obligationId: null, closePeriod: false });
+    const pending = await scenario(KRAEMER); // still PROPOSED → not measured
+
+    const pairs = await loadReviewedPairs(db);
+    const byDoc = new Map(pairs.map((p) => [p.documentId, p]));
+
+    expect(byDoc.get(asIs.document.id)).toMatchObject({ modelUsed: "test-model", confidence: 0.9, proposed: STATEMENT, confirmed: STATEMENT });
+    expect(byDoc.get(fixed.document.id)).toMatchObject({
+      proposed: { documentType: "RECEIPT" },
+      confirmed: { documentType: "INCOMING_INVOICE" },
+    });
+    expect(byDoc.has(pending.document.id)).toBe(false);
+  });
+});

@@ -4,24 +4,13 @@
 // was pressed: if nothing differs, it is a confirmation of the LLM row.
 
 import { z } from "zod";
+import { changedFields, FIELD_NAMES, type ClassificationFields, type FieldName } from "@/domain/classificationFields";
 import { parseMoney } from "@/domain/money";
 import { DOCUMENT_TYPES, type DocumentType } from "@/domain/obligations/types";
 import { dbToIsoDate, parseIsoDate, type IsoDate } from "@/domain/calendar/isoDate";
 
 export { parseMoney };
-
-export interface ClassificationFields {
-  documentType: DocumentType;
-  documentDate: IsoDate | null;
-  /** Exact 2-decimal string, e.g. "8925.00". */
-  amount: string | null;
-  vatAmount: string | null;
-  currency: string;
-  counterparty: string | null;
-}
-
-export const FIELD_NAMES = ["documentType", "documentDate", "amount", "vatAmount", "currency", "counterparty"] as const;
-export type FieldName = (typeof FIELD_NAMES)[number];
+export { changedFields, FIELD_NAMES, type ClassificationFields, type FieldName };
 
 /** Normalise a stored classification row. */
 export function fieldsFromRow(row: {
@@ -92,9 +81,4 @@ export function parseReviewedFields(input: Record<string, unknown>): ParseResult
       counterparty: v.counterparty === "" ? null : v.counterparty,
     },
   };
-}
-
-/** The fields whose values differ. Empty array = identical. */
-export function changedFields(a: ClassificationFields, b: ClassificationFields): FieldName[] {
-  return FIELD_NAMES.filter((k) => a[k] !== b[k]);
 }

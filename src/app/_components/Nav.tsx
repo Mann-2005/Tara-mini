@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "What's missing" },
   { href: "/upload", label: "Upload" },
   { href: "/review", label: "Review" },
+  { href: "/accuracy", label: "Accuracy" },
 ];
 
 export function Nav({ reviewCount }: { reviewCount: number }) {
