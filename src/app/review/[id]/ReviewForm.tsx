@@ -77,7 +77,7 @@ export function ReviewForm({
   obligations,
 }: {
   documentId: string;
-  proposal: { fields: ClassificationFields; confidence: number | null; modelUsed: string | null };
+  proposal: { fields: ClassificationFields; confidence: number | null; modelUsed: string | null; source?: "LLM" | "HUMAN"; createdBy?: string };
   obligations: LinkableObligation[];
 }) {
   const original = useMemo(() => toFormValues(proposal.fields), [proposal.fields]);
@@ -101,6 +101,8 @@ export function ReviewForm({
   const fieldError = (name: FieldName) => (state.status === "error" ? state.fieldErrors?.[name] : undefined);
 
   const confidence = proposal.confidence;
+  // Eigenbelege are entered by staff, not proposed by the model: word the form accordingly.
+  const byStaff = proposal.source === "HUMAN";
   const lowConfidence = confidence !== null && confidence < 0.8;
 
   return (
@@ -109,7 +111,7 @@ export function ReviewForm({
         <input type="hidden" name="documentId" value={documentId} />
 
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule-soft px-5 py-3">
-          <h2 className="font-semibold">{editing ? "Correct the proposal" : "The model's proposal"}</h2>
+          <h2 className="font-semibold">{editing ? (byStaff ? "Correct the entry" : "Correct the proposal") : byStaff ? `Entered by ${proposal.createdBy ?? "staff"}` : "The model's proposal"}</h2>
           {confidence !== null && (
             <p className={`text-sm ${lowConfidence ? "font-medium text-amber" : "text-ink-muted"}`}>
               Model confidence {Math.round(confidence * 100)} %{lowConfidence && ", check carefully"}
@@ -144,7 +146,9 @@ export function ReviewForm({
                     />
                   )}
                   {changed.includes(name) && (
-                    <span className="mt-1 block text-stamp">Model said: {display(name, original)}</span>
+                    <span className="mt-1 block text-stamp">
+                      {byStaff ? "Entered as" : "Model said"}: {display(name, original)}
+                    </span>
                   )}
                   {fieldError(name) && <span className="mt-1 block text-red">{fieldError(name)}</span>}
                 </label>
@@ -224,8 +228,7 @@ export function ReviewForm({
           )}
           {changed.length > 0 && (
             <p className="text-sm text-ink-muted">
-              {changed.length} field{changed.length === 1 ? "" : "s"} corrected. The model&rsquo;s proposal is kept unchanged for accuracy
-              tracking.
+              {changed.length} field{changed.length === 1 ? "" : "s"} corrected. {byStaff ? "The original entry is kept unchanged." : "The model’s proposal is kept unchanged for accuracy tracking."}
             </p>
           )}
         </div>

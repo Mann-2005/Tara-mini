@@ -2,7 +2,7 @@
 // starts to count towards an obligation.
 //
 // confirmDocument, in one transaction:
-//   1. Compare the reviewer's fields with the LLM proposal.
+//   1. Compare the reviewer's fields with the proposal (the LLM's, or staff's for an Eigenbeleg).
 //      - identical → the LLM row is confirmed (its only permitted update)
 //      - different → a new HUMAN row is inserted (supersedesId → LLM row) and
 //        confirmed; the LLM row is left untouched, so accuracy can be measured
@@ -61,10 +61,11 @@ export async function confirmDocument(db: PrismaClient, input: ConfirmInput): Pr
 
     const document = await tx.document.findUniqueOrThrow({ where: { id: input.documentId } });
     const proposal = await tx.documentClassification.findFirst({
-      where: { documentId: document.id, source: "LLM", confirmedAt: null },
+      // The original proposal: the model's (uploads) or staff's (Eigenbelege). Corrections supersede it.
+      where: { documentId: document.id, supersedesId: null, confirmedAt: null },
       orderBy: { createdAt: "desc" },
     });
-    if (!proposal) throw new ReviewError("There is no model proposal to review for this document.");
+    if (!proposal) throw new ReviewError("There is no proposal to review for this document.");
 
     // 2. Confirm as-is, or record a correction.
     const changed = changedFields(fieldsFromRow(proposal), input.fields);

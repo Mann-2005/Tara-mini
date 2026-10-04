@@ -33,7 +33,8 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "unpdf": "^1.8.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.5",
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -46,7 +47,6 @@
     "dotenv": "^18.0.5",
     "eslint": "^9",
     "eslint-config-next": "15.5.27",
-    "pdf-lib": "^1.17.1",
     "prisma": "7.10.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",

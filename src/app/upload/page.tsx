@@ -75,6 +75,11 @@ export default async function UploadPage() {
                           {DOCUMENT_TYPE_LABELS[llm.documentType]}
                           {llm.confidence !== null && <span className="whitespace-nowrap text-ink-muted"> ({Math.round(llm.confidence * 100)} %)</span>}
                         </>
+                      ) : d.origin === "EIGENBELEG" ? (
+                        <span>
+                          <span className="rounded-brand bg-brand px-1.5 py-0.5 text-xs font-semibold text-lime">Eigenbeleg</span>{" "}
+                          <span className="text-ink-muted">entered by staff</span>
+                        </span>
                       ) : (
                         <span className="text-ink-muted">None yet</span>
                       )}

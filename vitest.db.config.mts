@@ -1,5 +1,7 @@
 // Integration tests against a real Postgres (the isolated tara_mini_test DB).
 //   pnpm test:db
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
@@ -13,7 +15,8 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.db.test.ts"],
     globalSetup: ["./test/db/globalSetup.ts"],
-    env: { DATABASE_URL: TEST_DATABASE_URL },
+    // Files written by tests (e.g. Eigenbeleg PDFs) go to a temp folder, never ./storage.
+    env: { DATABASE_URL: TEST_DATABASE_URL, STORAGE_DIR: path.join(tmpdir(), "tara-mini-test-storage") },
     fileParallelism: false,
     testTimeout: 20_000,
   },

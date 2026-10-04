@@ -23,6 +23,9 @@ importers:
       next:
         specifier: 15.5.27
         version: 15.5.27(@types/node@20.19.43)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
       pg:
         specifier: ^8.23.1
         version: 8.23.1
@@ -69,9 +72,6 @@ importers:
       eslint-config-next:
         specifier: 15.5.27
         version: 15.5.27(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      pdf-lib:
-        specifier: ^1.17.1
-        version: 1.17.1
       prisma:
         specifier: 7.10.0
         version: 7.10.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.9.3)

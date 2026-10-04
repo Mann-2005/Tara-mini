@@ -69,6 +69,13 @@ GOOGLE_GENERATIVE_AI_API_KEY="…"
 | **Upload** (`/upload`) | Upload a PDF or image for a client. Text is extracted, Gemini proposes type, date, amounts and counterparty, and the result is stored as an **unconfirmed proposal**. |
 | **Review** (`/review`) | The original document beside the model's proposal. **Confirm** it, **Correct** it (stored as a new human row; the model's row is never changed), or **Reject** it. Confirming links the document to the obligation it fulfils. |
 | **Accuracy** (`/accuracy`) | How often the model's proposals survived review unchanged: overall, per field, per document type, by confidence band, with every correction listed. |
+| **Eigenbeleg** (`/eigenbeleg/new`) | Draft a substitute voucher for a missing receipt, from any missing Eingangsrechnungen row or missing-recurring-invoice row. It produces a printable PDF voucher (0,00 EUR input VAT, § 15 UStG), stored as a draft receipt that counts only after review. |
+
+The dashboard also shows the **intelligence layer**: a **Compliance Score** per client
+(Grade A–D from delivery timeliness), a **VAT forecast** for the next return
+(Vorsteuer, Umsatzsteuer, estimated Zahllast or Guthaben), and **missing recurring
+invoices** (a vendor that normally invoices monthly but hasn't this month). All
+three are deterministic calculations in `src/domain/analytics/`, never AI.
 
 The workflow, end to end:
 
@@ -108,6 +115,8 @@ src/
 │   ├── gaps/                the gap engine: computeGaps({ asOf, clients, obligations })
 │   ├── fulfilment/          which obligation a confirmed document can fulfil (suggestion + validation)
 │   ├── accuracy/            LLM proposal vs confirmed truth
+│   ├── analytics/           V2: Compliance Score, VAT forecast, missing recurring invoices (100 % covered)
+│   ├── eigenbeleg/          V2: substitute-voucher validation and content (100 % covered)
 │   ├── classificationFields.ts   the reviewable fields + changedFields (shared by review and accuracy)
 │   └── money.ts             German / plain money parsing
 │
@@ -219,7 +228,7 @@ AuditEvent   (append-only; references any entity by type + id)
 | `Client` | VAT filing frequency (`MONTHLY` / `QUARTERLY` / `NONE`), payroll, Dauerfristverlängerung, fiscal-year-end month, federal state (for holidays), `isActive` instead of deletion |
 | `ObligationType` | `kind` (`CLIENT_DELIVERY` / `FIRM_FILING`), `appliesWhen`, `recurrence`, due-date parameters, accepted document types, `minDocuments`, `requiresManualCompletion` |
 | `Obligation` | One per client, type and period (unique). `dueDate` is materialised by the pure due-date function. Stored status: `OPEN` / `COMPLETE` / `WAIVED` only |
-| `Document` | File metadata, **SHA-256** (integrity and duplicate detection), extracted text, status `PENDING` → `PROPOSED` → `CONFIRMED` / `REJECTED` |
+| `Document` | File metadata, **SHA-256** (integrity and duplicate detection), extracted text, status `PENDING` → `PROPOSED` → `CONFIRMED` / `REJECTED`, `origin` `UPLOAD` / `EIGENBELEG` (substitute vouchers are flagged for auditors) |
 | `DocumentClassification` | Immutable rows: `source = LLM` (with `modelUsed`, `confidence`) or `HUMAN` (with `supersedesId`). Exactly one per document gets `confirmedBy` / `confirmedAt` |
 | `ObligationFulfilment` | Links a confirmed document (and the confirmed classification) to an obligation. Revoked via `revokedAt`, never deleted |
 | `AuditEvent` | Who, what, when, old → new, reason. UPDATE and DELETE are rejected by the database |
@@ -280,6 +289,17 @@ Other simplifications: the Lohnsteuer-Anmeldung (§41a EStG) is not modelled as 
 own obligation. The fiscal year is assumed to end on the last day of a month.
 "Due soon" means within **7 days**, which is configurable.
 
+### Eigenbeleg (substitute voucher)
+
+| Rule | Status |
+| --- | --- |
+| A business expense may be booked without its receipt if a substitute voucher records payee, date, amount, what was bought, why the original is missing, the business purpose, and is signed | Common practice (GoBD: verifiable, complete). Statutory field list does not exist; the voucher follows common practice |
+| **No input VAT** can be deducted: an Eigenbeleg is not an invoice under § 14 UStG | Statutory: § 15 Abs. 1 Nr. 1 UStG. The voucher always carries 0,00 EUR VAT; the form requires an explicit acknowledgement |
+| No amount limit, but tax offices accept Eigenbelege mainly for small amounts | **Assumption:** above 250 EUR (the Kleinbetragsrechnung limit, § 33 UStDV) the app **warns** to request a duplicate invoice; it doesn't block |
+| The expense date must fall inside the period it is booked to | Design decision (so the deterministic matcher links it to that period at review) |
+| Vouchers are numbered per client (EB-10003-0001, …) | Design decision. **Limitation:** two drafts at the same instant could share a number |
+| A drafted Eigenbeleg counts only after review; it is never counted as AI output on the accuracy page | Design decision (four-eyes principle; staff-entered, not model-proposed) |
+
 ### GoBD
 
 The *Grundsätze zur ordnungsmäßigen Führung und Aufbewahrung von Büchern…*
@@ -314,8 +334,9 @@ improve Google's products. The prototype is therefore limited to synthetic docum
 
 | Command | What runs | Needs |
 | --- | --- | --- |
-| `pnpm test` | **137 unit tests**: holidays, working days, due dates, generator, gap engine, matching, field parsing, accuracy, LLM classifier (against a mock model), PDF extraction, formatting | nothing |
-| `pnpm test:db` | **11 integration tests**: review flow (confirm, correct, close, reject, races, rollbacks, GoBD trigger) and accuracy pairing, on real Postgres | Docker running |
+| `pnpm test` | **310 unit tests**: holidays, working days, due dates, generator, gap engine, matching, field parsing, accuracy, LLM classifier (against a mock model), PDF extraction, formatting, the V2 analytics, Eigenbeleg rules and voucher PDF | nothing |
+| `pnpm test:coverage` | The unit tests with **100 % coverage enforced** on `src/domain/analytics`, `src/domain/eigenbeleg` and money arithmetic (fails below 100 %) | nothing |
+| `pnpm test:db` | **23 integration tests**: review flow (confirm, correct, close, reject, races, rollbacks, GoBD trigger), accuracy pairing, the insights loader (time travel, Berlin midnight), and the Eigenbeleg lifecycle, on real Postgres | Docker running |
 | `pnpm lint`, `pnpm build` | ESLint; type-checked production build | – |
 
 Highlights from the unit suite:
@@ -398,7 +419,7 @@ pnpm db:seed
 
 ## Stakeholder demo script
 
-About 25 minutes. Each step lists **what to do**, **what they'll see**, and **the
+About 30 minutes. Each step lists **what to do**, **what they'll see**, and **the
 point to make**.
 
 ### Before the demo
@@ -542,7 +563,31 @@ as missing, because on that day it hadn't arrived.
 **Say:** "All three are plain, tested calculations: no AI. The AI only reads
 documents; everything you just saw is arithmetic you can check."
 
-### 8. Compliance by construction (optional, 2 min)
+### 8. Missing receipt? Draft an Eigenbeleg (3 min)
+
+**Do:** on Weber's *"Missing expected recurring invoice: Telefónica…"* row, click
+**Draft Eigenbeleg**.
+
+**They see:** the form already filled in: Weber's September Eingangsrechnungen,
+3 September, 47,60 EUR, Telefónica. Add what was bought and the business purpose.
+Point at the **VAT** panel: *no input VAT can be deducted (§ 15 UStG)*, with a
+required acknowledgement. Click **Create Eigenbeleg**.
+
+**Then:** the review page opens with the generated **PDF voucher** beside the
+fields: number EB-10003-0001, the statutory content, the § 15 UStG note and a
+signature line. Click **Confirm**: it now counts towards September.
+
+**Say:**
+- "When a minor receipt is lost, staff produce a compliant substitute voucher in a
+  minute instead of an email chain. It's stored unchangeably like any upload and
+  flagged as an Eigenbeleg for the auditor."
+- "It still goes through review, and it never counts as AI output: staff entered it."
+
+**Show the effect:** click **Back to today** on the dashboard. Weber's Telefónica
+row is gone. (On 2 October it is still there: the voucher was created today, and
+the insights only use what was known on the chosen date.)
+
+### 9. Compliance by construction (optional, 2 min)
 
 **Do:** in a terminal:
 
@@ -558,7 +603,7 @@ docker exec tara-mini-db psql -U tara -d tara_mini -c 'UPDATE "AuditEvent" SET a
 application code that a bug could bypass. Every change is in an append-only
 audit log: who, what, when, old value, new value."
 
-### 9. Close with what's next (1 min)
+### 10. Close with what's next (1 min)
 
 - Login and access control, so every action is tied to a real person (GoBD).
 - A paid AI tier with a data processing agreement before any real client document.
@@ -644,6 +689,11 @@ This prototype deliberately stops short of production. Before any real client da
 4. **Firm configuration.** Let the firm edit obligation types and deadlines
    (internal deadlines, due-soon horizon) through an audited admin flow.
 5. **Validation by a Steuerberater** of every assumption listed above.
+6. **One time-travel rule for the whole dashboard.** The insights (score, VAT, missing
+   invoices) only use documents uploaded by the as-of date. The red/amber/green list
+   uses each obligation's *current* stored status. Viewing a past date can therefore
+   show a document that arrived later as received, while its missing-invoice row is
+   still shown. Fix: derive obligation status as of the date, too.
 
 ---
 
@@ -660,3 +710,8 @@ Built in seven reviewed steps, one commit each:
 | `f14e3ab` | 5. Upload page with Gemini classification proposals (+ `a15eaeb` rate-limit message) |
 | `0b8f898` | 6. Review page: confirm, correct, reject |
 | `e19f738` | 7. Classification accuracy page |
+| `b9c446c` | TARA brand identity |
+| `c9ea8a2` | V2.1 Pure analytics engines (Compliance Score, VAT forecast, missing recurring invoices) |
+| `69fa896` | V2.2 Demo scenarios in the seed, analytics loaders |
+| `c4e48c4` | V2.3 Intelligence layer on the dashboard |
+| (this commit) | V2.4 Eigenbeleg generator |

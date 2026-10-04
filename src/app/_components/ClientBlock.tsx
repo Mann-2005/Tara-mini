@@ -3,9 +3,11 @@
 // Compliance Score (header pill), expected-but-missing recurring invoices
 // (in "Client owes") and the running VAT forecast (footer panel).
 
-import type { ClientInsights } from "@/domain/analytics/insights";
+import Link from "next/link";
+import type { ClientInsights, GhostCheck } from "@/domain/analytics/insights";
 import type { IsoDate } from "@/domain/calendar/isoDate";
 import type { ClientGaps, Gap, Rag } from "@/domain/gaps/gapEngine";
+import { centsToDecimal } from "@/domain/money";
 import { dueText, gapAction, periodLabel, shortDate } from "../_lib/format";
 import { GhostRows, ScorePill, VatForecastPanel } from "./Insights";
 
@@ -35,7 +37,7 @@ function countsLine({ overdue, dueSoon }: ClientGaps["counts"]): string {
   return parts.join(", ");
 }
 
-function GapRow({ gap }: { gap: Gap }) {
+function GapRow({ gap, action }: { gap: Gap; action?: React.ReactNode }) {
   const { title, detail } = gapAction(gap);
   // Upcoming items stay visible but quiet, so overdue and due-soon rows carry the weight.
   const quiet = gap.severity === "GREEN";
@@ -46,7 +48,10 @@ function GapRow({ gap }: { gap: Gap }) {
         <p className={`leading-snug ${quiet ? "" : "font-medium text-ink"}`}>
           {title} <span className="font-normal text-ink-muted">for {periodLabel(gap.periodStart, gap.periodEnd)}</span>
         </p>
-        <p className="text-sm text-ink-muted">{detail}</p>
+        <p className="text-sm text-ink-muted">
+          {detail}
+          {action && <> {action}</>}
+        </p>
       </div>
       <div className="shrink-0 text-right text-sm">
         <p className={`font-medium ${DUE_COLOUR[gap.severity]}`}>{dueText(gap.daysUntilDue)}</p>
@@ -66,7 +71,39 @@ function Column({ heading, empty, firm, children }: { heading: string; empty: st
   );
 }
 
-export function ClientBlock({ client, insights, asOf }: { client: ClientGaps; insights?: ClientInsights; asOf: IsoDate }) {
+/** Link to the Eigenbeleg form, pre-filled where we know more (e.g. from a missing recurring invoice). */
+function eigenbelegLink(obligationId: string, prefill: Record<string, string> = {}) {
+  const query = new URLSearchParams({ obligationId, ...prefill }).toString();
+  return (
+    <Link href={`/eigenbeleg/new?${query}`} className="brand-link whitespace-nowrap">
+      Draft Eigenbeleg
+    </Link>
+  );
+}
+
+function ghostPrefill(check: GhostCheck, vendorIndex: number): Record<string, string> {
+  const v = check.vendors[vendorIndex];
+  // Expected on the same day of the month as last time, clamped to the period.
+  const expected = `${check.periodStart.slice(0, 7)}-${v.lastSeenDate.slice(8)}`;
+  return {
+    payee: v.displayName,
+    ...(v.expectedAmountCents !== null ? { amount: centsToDecimal(v.expectedAmountCents).replace(".", ",") } : {}),
+    date: expected > check.periodEnd ? check.periodEnd : expected,
+  };
+}
+
+export function ClientBlock({
+  client,
+  insights,
+  asOf,
+  eigenbelegObligationIds,
+}: {
+  client: ClientGaps;
+  insights?: ClientInsights;
+  asOf: IsoDate;
+  /** Obligations a substitute receipt (Eigenbeleg) can fulfil. */
+  eigenbelegObligationIds?: ReadonlySet<string>;
+}) {
   // Engine order (most urgent first) is preserved within each column.
   const clientOwes = client.gaps.filter((g) => g.owner === "CLIENT");
   const firmOwes = client.gaps.filter((g) => g.owner === "FIRM");
@@ -89,7 +126,18 @@ export function ClientBlock({ client, insights, asOf }: { client: ClientGaps; in
       {hasRows ? (
         <div className="grid md:grid-cols-2">
           <Column heading="Client owes" empty="Nothing outstanding from the client.">
-            {[...clientOwes.map((g) => <GapRow key={g.obligationId} gap={g} />), ghosts.length > 0 && <GhostRows key="ghosts" checks={ghosts} />]}
+            {[
+              ...clientOwes.map((g) => (
+                <GapRow
+                  key={g.obligationId}
+                  gap={g}
+                  action={g.receipt !== "AWAITING_CLOSE" && eigenbelegObligationIds?.has(g.obligationId) ? eigenbelegLink(g.obligationId) : undefined}
+                />
+              )),
+              ghosts.length > 0 && (
+                <GhostRows key="ghosts" checks={ghosts} renderAction={(check, i) => eigenbelegLink(check.obligationId, ghostPrefill(check, i))} />
+              ),
+            ]}
           </Column>
           <Column heading="Firm to do" empty="Nothing for the firm right now." firm>
             {firmOwes.map((g) => (

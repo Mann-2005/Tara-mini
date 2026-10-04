@@ -31,7 +31,14 @@ function Viewer({ id, mimeType, filename, hasOriginal, rawText }: { id: string; 
   );
 }
 
-export default async function ReviewDocumentPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReviewDocumentPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ drafted?: string; largeAmount?: string }>;
+}) {
+  const { drafted, largeAmount } = await searchParams;
   const { id } = await params;
   const detail = await loadReviewDetail(db, id);
   if (!detail) notFound();
@@ -44,14 +51,28 @@ export default async function ReviewDocumentPage({ params }: { params: Promise<{
           <Link href="/review" className="brand-link text-sm">
             Back to the review queue
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold break-all">{document.filename}</h1>
+          <h1 className="mt-2 flex flex-wrap items-center gap-3 text-2xl font-semibold break-all">
+            {document.filename}
+            {document.origin === "EIGENBELEG" && <span className="rounded-brand bg-brand px-2 py-0.5 text-xs font-semibold text-lime">Eigenbeleg</span>}
+          </h1>
           <p className="mt-1 text-ink-muted">
-            From {document.client.name} (client {document.client.clientNumber}), uploaded{" "}
+            {document.origin === "EIGENBELEG" ? "Drafted for" : "From"} {document.client.name} (client {document.client.clientNumber}),{" "}
+            {document.origin === "EIGENBELEG" ? `by ${document.uploadedBy} on` : "uploaded"}{" "}
             {document.uploadedAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Berlin" })}
           </p>
         </div>
         <p className="font-medium">{DOCUMENT_STATUS_LABELS[document.status]}</p>
       </header>
+
+      {drafted && document.status === "PROPOSED" && (
+        <div role="status" className="mb-6 border-l-4 border-brand bg-stamp-wash px-4 py-3">
+          <p>
+            <span className="font-medium">Eigenbeleg {drafted} created.</span> Check the voucher on the left, then confirm it to count it towards the
+            selected period. Print it for the client&rsquo;s signature unless they confirmed digitally.
+          </p>
+          {largeAmount && <p className="mt-1 text-sm text-amber">Over 250 EUR: keep the vendor&rsquo;s duplicate invoice if one can still be obtained.</p>}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section aria-label="Original document" className="card h-[75vh] overflow-hidden lg:sticky lg:top-4">

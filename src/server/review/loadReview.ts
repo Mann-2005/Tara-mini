@@ -12,7 +12,8 @@ export async function loadReviewQueue(db: PrismaClient) {
     orderBy: { uploadedAt: "asc" }, // oldest first: first in, first reviewed
     include: {
       client: { select: { name: true, clientNumber: true } },
-      classifications: { where: { source: "LLM" }, orderBy: { createdAt: "desc" }, take: 1 },
+      // The original proposal: the model's, or staff's for an Eigenbeleg.
+      classifications: { where: { supersedesId: null }, orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
 }
@@ -31,7 +32,8 @@ export async function loadReviewDetail(db: PrismaClient, documentId: string) {
   });
   if (!document) return null;
 
-  const proposal = [...document.classifications].reverse().find((c) => c.source === "LLM") ?? null;
+  // The original proposal (model or, for an Eigenbeleg, staff): the row that supersedes nothing.
+  const proposal = [...document.classifications].reverse().find((c) => c.supersedesId === null) ?? null;
   const confirmed = document.classifications.find((c) => c.confirmedAt !== null) ?? null;
 
   const obligations = await db.obligation.findMany({
@@ -58,6 +60,8 @@ export async function loadReviewDetail(db: PrismaClient, documentId: string) {
       fields: fieldsFromRow(proposal),
       confidence: proposal.confidence,
       modelUsed: proposal.modelUsed,
+      source: proposal.source,
+      createdBy: proposal.createdBy,
     },
     confirmed: confirmed && { ...confirmed, fields: fieldsFromRow(confirmed) },
     obligations: linkable,

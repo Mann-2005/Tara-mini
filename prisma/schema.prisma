@@ -104,6 +104,12 @@ enum DocumentType {
   OTHER
 }
 
+/// How a document came into the system.
+enum DocumentOrigin {
+  UPLOAD // a file sent by the client
+  EIGENBELEG // a substitute voucher drafted by staff because the original is missing
+}
+
 enum ClassificationSource {
   LLM // proposal produced by the model
   HUMAN // a correction entered by staff
@@ -221,6 +227,8 @@ model Document {
   uploadedBy  String
   rawText     String?        @db.Text
   status      DocumentStatus @default(PENDING)
+  /// Eigenbelege are flagged explicitly: tax auditors review them separately.
+  origin      DocumentOrigin @default(UPLOAD)
 
   client          Client                   @relation(fields: [clientId], references: [id], onDelete: Restrict)
   classifications DocumentClassification[]

@@ -41,6 +41,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const [gapInput, insightInputs] = await Promise.all([loadGapInput(db, asOf), loadInsightsInputs(db, asOf)]);
   const report = computeGaps(gapInput);
   const insights = new Map(insightInputs.map((input) => [input.client.id, computeClientInsights(input)]));
+  // Obligations a substitute receipt can fulfil (client deliveries that accept receipts).
+  const eigenbelegObligationIds = new Set(
+    insightInputs.flatMap((i) => i.obligations.filter((o) => o.kind === "CLIENT_DELIVERY" && o.acceptedDocumentTypes.includes("RECEIPT")).map((o) => o.id)),
+  );
   const ghostCount = [...insights.values()].reduce((n, i) => n + i.ghosts.reduce((m, g) => m + g.vendors.length, 0), 0);
   const byRag = (rag: Rag) => report.clients.filter((c) => c.rag === rag);
 
@@ -119,7 +123,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
                 <div className="space-y-4">
                   {s.clients.map((c) => (
-                    <ClientBlock key={c.clientId} client={c} insights={insights.get(c.clientId)} asOf={asOf} />
+                    <ClientBlock key={c.clientId} client={c} insights={insights.get(c.clientId)} asOf={asOf} eigenbelegObligationIds={eigenbelegObligationIds} />
                   ))}
                 </div>
               </section>

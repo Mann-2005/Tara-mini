@@ -62,6 +62,7 @@ export default async function ReviewQueuePage({ searchParams }: { searchParams: 
                     </span>
                   </span>
                   <span className="text-sm">
+                    {d.origin === "EIGENBELEG" && <span className="mr-2 rounded-brand bg-brand px-1.5 py-0.5 text-xs font-semibold text-lime">Eigenbeleg</span>}
                     {llm ? DOCUMENT_TYPE_LABELS[llm.documentType] : "No proposal"}
                     {llm?.confidence !== null && llm?.confidence !== undefined && (
                       <span className={low ? " font-medium text-amber" : " text-ink-muted"}> ({Math.round(llm.confidence * 100)} %)</span>
