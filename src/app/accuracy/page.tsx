@@ -64,7 +64,7 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
         {title}
       </h2>
       <p className="mt-1 max-w-2xl text-sm text-ink-muted">{intro}</p>
-      <div className="mt-4 overflow-x-auto border border-rule bg-sheet">{children}</div>
+      <div className="card mt-4 overflow-x-auto">{children}</div>
     </section>
   );
 }
@@ -85,8 +85,8 @@ export default async function AccuracyPage({ searchParams }: { searchParams: Pro
       key={href}
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`border px-3 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp ${
-        active ? "border-stamp bg-stamp text-sheet" : "border-rule bg-sheet text-ink hover:border-stamp"
+      className={`rounded-brand border px-3 py-1.5 text-sm transition-colors ${
+        active ? "border-brand bg-brand font-medium text-lime" : "border-rule bg-sheet text-ink hover:border-brand"
       }`}
     >
       {label}
@@ -112,7 +112,7 @@ export default async function AccuracyPage({ searchParams }: { searchParams: Pro
       {report.documents.total === 0 ? (
         <p className="py-12 text-ink-muted">
           No reviewed documents yet. Confirm or correct documents on the{" "}
-          <Link href="/review" className="text-stamp underline underline-offset-2">
+          <Link href="/review" className="brand-link">
             Review
           </Link>{" "}
           page and their accuracy appears here.
@@ -163,7 +163,7 @@ export default async function AccuracyPage({ searchParams }: { searchParams: Pro
 
           <Section id="by-type" title="By document type" intro="Grouped by what the document really was, as confirmed by a reviewer.">
             <table className="w-full min-w-[46rem] text-sm">
-              <thead className="border-b border-rule">
+              <thead className="border-b border-rule-soft">
                 <tr>
                   <th className={th}>Document type</th>
                   <th className={th}>Every field right</th>
@@ -171,7 +171,7 @@ export default async function AccuracyPage({ searchParams }: { searchParams: Pro
                   <th className={th}>Most often corrected</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-rule">
+              <tbody className="divide-y divide-rule-soft">
                 {report.byType.map((t) => (
                   <tr key={t.documentType}>
                     <td className={`${td} font-medium`}>{DOCUMENT_TYPE_LABELS[t.documentType]}</td>
@@ -190,7 +190,7 @@ export default async function AccuracyPage({ searchParams }: { searchParams: Pro
 
           <Section id="by-field" title="By field" intro="How often each field was right, across all reviewed documents.">
             <table className="w-full min-w-[30rem] text-sm">
-              <tbody className="divide-y divide-rule">
+              <tbody className="divide-y divide-rule-soft">
                 {report.fields.map((f) => (
                   <tr key={f.field}>
                     <td className={`${td} w-48 font-medium`}>{FIELD_LABELS[f.field]}</td>
@@ -209,13 +209,13 @@ export default async function AccuracyPage({ searchParams }: { searchParams: Pro
             intro="If confidence is useful, the high bands should be right more often than the low ones. Until it is, review every document the same way."
           >
             <table className="w-full min-w-[30rem] text-sm">
-              <thead className="border-b border-rule">
+              <thead className="border-b border-rule-soft">
                 <tr>
                   <th className={th}>Model confidence</th>
                   <th className={th}>Every field right</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-rule">
+              <tbody className="divide-y divide-rule-soft">
                 {report.confidence.map((b) => (
                   <tr key={b.label}>
                     <td className={`${td} w-48 font-medium`}>{b.label}</td>
@@ -231,14 +231,14 @@ export default async function AccuracyPage({ searchParams }: { searchParams: Pro
               <p className="px-4 py-3 text-sm text-ink-muted">The model recognised every document&rsquo;s type.</p>
             ) : (
               <table className="w-full min-w-[30rem] text-sm">
-                <thead className="border-b border-rule">
+                <thead className="border-b border-rule-soft">
                   <tr>
                     <th className={th}>Model said</th>
                     <th className={th}>It was</th>
                     <th className={`${th} text-right`}>Documents</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-rule">
+                <tbody className="divide-y divide-rule-soft">
                   {report.misclassifications.map((m) => (
                     <tr key={`${m.proposed}-${m.confirmed}`}>
                       <td className={td}>{DOCUMENT_TYPE_LABELS[m.proposed]}</td>
@@ -255,11 +255,11 @@ export default async function AccuracyPage({ searchParams }: { searchParams: Pro
             {report.corrections.length === 0 ? (
               <p className="px-4 py-3 text-sm text-ink-muted">No corrections yet.</p>
             ) : (
-              <ul className="divide-y divide-rule text-sm">
+              <ul className="divide-y divide-rule-soft text-sm">
                 {report.corrections.map((c) => (
                   <li key={c.documentId} className="px-4 py-3">
                     <p>
-                      <Link href={`/review/${c.documentId}`} className="font-medium text-stamp underline underline-offset-2">
+                      <Link href={`/review/${c.documentId}`} className="brand-link">
                         {c.filename}
                       </Link>{" "}
                       <span className="text-ink-muted">

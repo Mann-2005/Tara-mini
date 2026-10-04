@@ -15,7 +15,7 @@ function Viewer({ id, mimeType, filename, hasOriginal, rawText }: { id: string; 
   if (!hasOriginal) {
     return (
       <div className="flex h-full flex-col">
-        <p className="border-b border-rule px-4 py-2 text-sm text-ink-muted">
+        <p className="border-b border-rule-soft px-4 py-2 text-sm text-ink-muted">
           No original file is stored for this document (sample data). Showing its extracted text.
         </p>
         <pre className="flex-1 overflow-auto p-4 font-sans text-sm whitespace-pre-wrap">{rawText ?? "No text available."}</pre>
@@ -41,7 +41,7 @@ export default async function ReviewDocumentPage({ params }: { params: Promise<{
     <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-4 py-6">
         <div>
-          <Link href="/review" className="text-sm text-stamp underline underline-offset-2">
+          <Link href="/review" className="brand-link text-sm">
             Back to the review queue
           </Link>
           <h1 className="mt-2 text-2xl font-semibold break-all">{document.filename}</h1>
@@ -54,7 +54,7 @@ export default async function ReviewDocumentPage({ params }: { params: Promise<{
       </header>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section aria-label="Original document" className="h-[75vh] border border-rule bg-sheet lg:sticky lg:top-4">
+        <section aria-label="Original document" className="card h-[75vh] overflow-hidden lg:sticky lg:top-4">
           <Viewer id={document.id} mimeType={document.mimeType} filename={document.filename} hasOriginal={hasOriginal} rawText={document.rawText} />
         </section>
 
@@ -62,7 +62,7 @@ export default async function ReviewDocumentPage({ params }: { params: Promise<{
           {document.status === "PROPOSED" && proposal ? (
             <ReviewForm documentId={document.id} proposal={proposal} obligations={obligations} />
           ) : (
-            <div className="space-y-4 border border-rule bg-sheet px-5 py-4">
+            <div className="card space-y-4 px-5 py-4">
               <p className="font-medium">This document has already been reviewed.</p>
               {confirmed && (
                 <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
@@ -92,9 +92,9 @@ export default async function ReviewDocumentPage({ params }: { params: Promise<{
           )}
 
           {document.rawText && hasOriginal && (
-            <details className="mt-6 border border-rule bg-sheet">
+            <details className="card rounded-card-sm mt-6 overflow-hidden">
               <summary className="cursor-pointer px-5 py-3 text-sm text-ink-muted">Extracted text</summary>
-              <pre className="max-h-80 overflow-auto border-t border-rule px-5 py-4 font-sans text-sm whitespace-pre-wrap">{document.rawText}</pre>
+              <pre className="max-h-80 overflow-auto border-t border-rule-soft px-5 py-4 font-sans text-sm whitespace-pre-wrap">{document.rawText}</pre>
             </details>
           )}
         </section>

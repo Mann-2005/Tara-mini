@@ -28,9 +28,10 @@ document is; a person confirms or corrects it before it counts towards anything.
 7. [Testing](#testing)
 8. [Seeding and sample data](#seeding-and-sample-data)
 9. [Stakeholder demo script](#stakeholder-demo-script)
-10. [Configuration](#configuration)
-11. [Troubleshooting](#troubleshooting)
-12. [Before production](#before-production)
+10. [Branding](#branding)
+11. [Configuration](#configuration)
+12. [Troubleshooting](#troubleshooting)
+13. [Before production](#before-production)
 
 ---
 
@@ -90,7 +91,7 @@ The workflow, end to end:
 
 | Layer | Choice |
 | --- | --- |
-| Web | Next.js 15 (App Router, Server Components, Server Actions), TypeScript, Tailwind CSS 4 |
+| Web | Next.js 15 (App Router, Server Components, Server Actions), TypeScript, Tailwind CSS 4 (TARA brand theme) |
 | Database | PostgreSQL 16 (Docker), Prisma 7 with the `pg` driver adapter |
 | LLM | Vercel AI SDK 7 (`generateText` + `Output.object`) with `@ai-sdk/google`, model `gemini-3.8-flash` |
 | Validation | Zod 4 (strict schemas for model output and reviewer input) |
@@ -520,6 +521,24 @@ audit log: who, what, when, old value, new value."
   configuration, not code.
 
 ---
+
+## Branding
+
+The UI uses TARA's brand identity, taken from the design variables on taratax.ai:
+forest green `#003d18` (primary), lime `#defe52` (accent, only on green), mint
+`#bdffd7`, ink `#002910`, page `#f4f4f4`, the **Public Sans** typeface, and the
+signature asymmetric corners (buttons rounded only bottom-right; cards 10/10/40/10px).
+
+| What | Where |
+| --- | --- |
+| Colour, font, radius and shadow tokens; `btn-primary` / `btn-secondary` / `btn-danger` / `card` / `field` | `src/app/globals.css` (Tailwind 4 configures its theme in CSS, so there is no `tailwind.config.ts`) |
+| Typeface | `src/app/layout.tsx` (`next/font` Public Sans) |
+| Firm name, product name, **logo** | `src/app/_components/brand.ts`: put the logo in `public/brand/` and set `logoSrc`; until then the nav shows a placeholder of the same size |
+
+Two deliberate deviations for accessibility: secondary text is ink at 68 % rather
+than the site's 60 % (which fails WCAG AA on white), and lime is never used as text
+on a light background. The status green (`#237a57`) is kept lighter and bluer than the
+brand green, so "on track" never reads as decoration.
 
 ## Configuration
 

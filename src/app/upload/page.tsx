@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const STATUS_COLOUR: Record<string, string> = {
   PENDING: "text-red",
-  PROPOSED: "text-stamp",
+  PROPOSED: "text-amber", // needs a person — not green, which means "done"
   CONFIRMED: "text-green",
   REJECTED: "text-ink-muted",
 };
@@ -46,9 +46,9 @@ export default async function UploadPage() {
         <h2 id="recent" className="text-xl font-semibold">
           Recent uploads
         </h2>
-        <div className="mt-4 overflow-x-auto border border-rule bg-sheet">
+        <div className="card mt-4 overflow-x-auto">
           <table className="w-full min-w-[44rem] text-left text-sm">
-            <thead className="border-b border-rule text-ink-muted">
+            <thead className="border-b border-rule-soft text-ink-muted">
               <tr>
                 <th className="px-4 py-2 font-medium">Uploaded</th>
                 <th className="px-4 py-2 font-medium">Client</th>
@@ -57,7 +57,7 @@ export default async function UploadPage() {
                 <th className="px-4 py-2 font-medium">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-rule">
+            <tbody className="divide-y divide-rule-soft">
               {recent.map((d) => {
                 const llm = d.classifications[0];
                 return (
@@ -84,7 +84,7 @@ export default async function UploadPage() {
                       {d.status === "PENDING" && (
                         <form action={retryClassification} className="ml-3 inline">
                           <input type="hidden" name="documentId" value={d.id} />
-                          <button type="submit" className="text-stamp underline underline-offset-2">
+                          <button type="submit" className="brand-link font-normal">
                             Retry
                           </button>
                         </form>

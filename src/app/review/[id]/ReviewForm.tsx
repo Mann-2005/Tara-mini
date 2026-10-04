@@ -51,7 +51,7 @@ function display(name: FieldName, v: FormValues): string {
 }
 
 const input =
-  "mt-1 block w-full border border-rule bg-sheet px-3 py-2 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp";
+  "field";
 
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -59,7 +59,7 @@ function SubmitButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="bg-ink px-4 py-2 font-medium text-sheet hover:bg-stamp disabled:cursor-wait disabled:bg-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+      className="btn-primary"
     >
       {pending ? "Saving…" : label}
     </button>
@@ -105,10 +105,10 @@ export function ReviewForm({
 
   return (
     <div className="space-y-8">
-      <form action={confirm} className="border border-rule bg-sheet">
+      <form action={confirm} className="card overflow-hidden">
         <input type="hidden" name="documentId" value={documentId} />
 
-        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule px-5 py-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule-soft px-5 py-3">
           <h2 className="font-semibold">{editing ? "Correct the proposal" : "The model's proposal"}</h2>
           {confidence !== null && (
             <p className={`text-sm ${lowConfidence ? "font-medium text-amber" : "text-ink-muted"}`}>
@@ -167,7 +167,7 @@ export function ReviewForm({
           )}
         </div>
 
-        <div className="border-t border-rule bg-stamp-wash px-5 py-4">
+        <div className="border-t border-rule-soft bg-stamp-wash px-5 py-4">
           <label className="block text-sm font-medium text-stamp">
             Counts towards
             <select
@@ -192,7 +192,7 @@ export function ReviewForm({
           )}
           {selected?.requiresManualCompletion && selected.status === "OPEN" && (
             <label className="mt-3 flex items-start gap-2 text-sm">
-              <input type="checkbox" name="closePeriod" className="mt-0.5 accent-stamp" />
+              <input type="checkbox" name="closePeriod" className="mt-0.5 size-4 accent-brand" />
               <span>
                 This is the last one: close {selected.typeName} for {periodLabel(selected.periodStart, selected.periodEnd)}.
               </span>
@@ -200,7 +200,7 @@ export function ReviewForm({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 border-t border-rule px-5 py-4">
+        <div className="flex flex-wrap items-center gap-3 border-t border-rule-soft px-5 py-4">
           <SubmitButton label={changed.length > 0 ? `Save correction and confirm` : "Confirm"} />
           {editing ? (
             <button
@@ -209,7 +209,7 @@ export function ReviewForm({
                 setValues(original);
                 setEditing(false);
               }}
-              className="px-2 py-2 text-sm text-stamp underline underline-offset-2"
+              className="brand-link px-2 py-2 text-sm"
             >
               Discard corrections
             </button>
@@ -217,7 +217,7 @@ export function ReviewForm({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="border border-ink px-4 py-2 font-medium hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+              className="btn-secondary"
             >
               Correct
             </button>
@@ -230,21 +230,21 @@ export function ReviewForm({
           )}
         </div>
         {state.status === "error" && (
-          <p role="alert" className="border-t border-rule bg-red-wash px-5 py-3 text-red">
+          <p role="alert" className="border-t border-rule-soft bg-red-wash px-5 py-3 text-red">
             {state.message}
           </p>
         )}
       </form>
 
-      <details className="border border-rule bg-sheet">
+      <details className="card rounded-card-sm overflow-hidden">
         <summary className="cursor-pointer px-5 py-3 text-sm text-ink-muted">Wrong or unusable document? Reject it</summary>
-        <form action={reject} className="space-y-3 border-t border-rule px-5 py-4">
+        <form action={reject} className="space-y-3 border-t border-rule-soft px-5 py-4">
           <input type="hidden" name="documentId" value={documentId} />
           <label className="block text-sm text-ink-muted">
             Reason (kept in the audit log)
             <input name="reason" required minLength={3} className={input} placeholder="e.g. Photo unreadable, client asked to resend" />
           </label>
-          <button type="submit" className="border border-red px-4 py-2 font-medium text-red hover:bg-red-wash">
+          <button type="submit" className="btn-danger">
             Reject document
           </button>
           {rejectState.status === "error" && (

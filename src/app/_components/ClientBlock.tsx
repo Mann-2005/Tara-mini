@@ -58,7 +58,7 @@ function Column({ heading, gaps, empty, firm }: { heading: string; gaps: Gap[]; 
       {gaps.length === 0 ? (
         <p className="py-2.5 text-sm text-ink-muted">{empty}</p>
       ) : (
-        <ul className="divide-y divide-rule">
+        <ul className="divide-y divide-rule-soft">
           {gaps.map((g) => (
             <GapRow key={g.obligationId} gap={g} />
           ))}
@@ -75,8 +75,8 @@ export function ClientBlock({ client }: { client: ClientGaps }) {
   const counts = countsLine(client.counts);
 
   return (
-    <article className={`border border-l-4 border-rule bg-sheet ${RULE[client.rag]}`}>
-      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule px-4 py-3 sm:px-5">
+    <article className={`card overflow-hidden border-l-4 ${RULE[client.rag]}`}>
+      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule-soft px-4 py-3 sm:px-5">
         <h3 className="text-lg font-semibold">
           {client.name} <span className="text-sm font-normal text-ink-muted">Client {client.clientNumber}</span>
         </h3>

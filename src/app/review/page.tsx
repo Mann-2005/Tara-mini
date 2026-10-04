@@ -32,7 +32,7 @@ export default async function ReviewQueuePage({ searchParams }: { searchParams: 
       {doneDoc && outcome && OUTCOME_TEXT[outcome] && (
         <p role="status" className="mt-6 border-l-4 border-green bg-green-wash px-4 py-3">
           {doneDoc.filename} was {OUTCOME_TEXT[outcome]}.{" "}
-          <Link href={`/review/${doneDoc.id}`} className="text-stamp underline underline-offset-2">
+          <Link href={`/review/${doneDoc.id}`} className="brand-link">
             See the decision
           </Link>
         </p>
@@ -41,13 +41,13 @@ export default async function ReviewQueuePage({ searchParams }: { searchParams: 
       {queue.length === 0 ? (
         <p className="mt-8 text-ink-muted">
           Nothing to review.{" "}
-          <Link href="/upload" className="text-stamp underline underline-offset-2">
+          <Link href="/upload" className="brand-link">
             Upload a document
           </Link>{" "}
           to get started.
         </p>
       ) : (
-        <ul className="mt-8 divide-y divide-rule border border-rule bg-sheet">
+        <ul className="card mt-8 divide-y divide-rule-soft overflow-hidden">
           {queue.map((d) => {
             const llm = d.classifications[0];
             const low = llm?.confidence !== null && llm?.confidence !== undefined && llm.confidence < 0.8;

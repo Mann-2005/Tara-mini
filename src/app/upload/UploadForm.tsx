@@ -6,7 +6,7 @@ import Link from "next/link";
 import { DOCUMENT_TYPE_LABELS, formatMoney } from "../_lib/labels";
 import { uploadDocument, type UploadState } from "./actions";
 
-const field = "mt-1 block w-full border border-rule bg-sheet px-3 py-2 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp";
+const field = "field";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -14,7 +14,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="bg-ink px-4 py-2 font-medium text-sheet hover:bg-stamp disabled:cursor-wait disabled:bg-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+      className="btn-primary"
     >
       {pending ? "Reading the document…" : "Upload and classify"}
     </button>
@@ -54,8 +54,8 @@ function Result({ state }: { state: UploadState }) {
         ["Model confidence", `${Math.round(p.confidence * 100)} %`],
       ];
       return (
-        <div role="status" className="border border-l-4 border-rule border-l-stamp bg-sheet">
-          <p className="border-b border-rule px-4 py-3">
+        <div role="status" className="card overflow-hidden border-l-4 border-l-brand">
+          <p className="border-b border-rule-soft px-4 py-3">
             <span className="font-medium">Proposal for {state.filename}</span>
             <span className="block text-sm text-ink-muted">
               Nothing counts yet. A person has to confirm or correct these fields before the document fulfils an obligation.
@@ -69,8 +69,8 @@ function Result({ state }: { state: UploadState }) {
               </div>
             ))}
           </dl>
-          <p className="border-t border-rule px-4 py-3">
-            <Link href={`/review/${state.documentId}`} className="font-medium text-stamp underline underline-offset-2">
+          <p className="border-t border-rule-soft px-4 py-3">
+            <Link href={`/review/${state.documentId}`} className="brand-link">
               Review it now
             </Link>
           </p>
@@ -106,7 +106,7 @@ export function UploadForm({ clients }: { clients: { id: string; name: string; c
             name="file"
             required
             accept="application/pdf,image/png,image/jpeg,image/webp"
-            className={`${field} file:mr-3 file:border-0 file:bg-stamp-wash file:px-3 file:py-1 file:text-stamp`}
+            className={`${field} file:mr-3 file:rounded-brand file:border-0 file:bg-brand file:px-3 file:py-1 file:text-lime`}
           />
           <span className="mt-1 block">PDF, PNG, JPEG or WebP, up to 10 MB.</span>
         </label>

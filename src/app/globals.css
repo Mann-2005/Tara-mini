@@ -1,32 +1,139 @@
 @import "tailwindcss";
 
 /*
-  Tara Mini palette: a cool form-paper ground, blue-black ink, muted status
-  colours that stay legible as text, and a rubber-stamp blue for work the
-  firm itself owes (filings, closing periods).
+  TARA brand theme.
+
+  Values are taken from taratax.ai's Webflow design variables
+  (taratax.webflow.shared.css, Sep 2026) and computed styles:
+    accent-primary   #003d18  (hover #005f25)   deep forest green
+    accent-secondary #defe52                    lime: ONLY on dark green (1.1:1 on light = unreadable)
+    accent-tertiary  #bdffd7                    mint
+    neutral-inverse  #002910                    ink
+    neutral-primary  #f4f4f4                    page
+    neutral-secondary#eeede4                    warm stone
+    text-on-accent   #fefefb                    warm white
+    font             Public Sans
+    button radius    0 0 .75rem 0   (only bottom-right rounded — the brand's signature corner)
+    card radius      10px 10px 40px 10px
+    elevated card    inset 1px ink-20% + 0 2px 4px / 0 8px 14px soft drop
+
+  Deviations made for accessibility (WCAG AA, 4.5:1 for body text):
+    - Secondary text: the site uses ink at 60% (4.35:1 on white, 3.67:1 on mint).
+      Here it is ink at 68% (#516d5b), which passes on every surface used.
+    - Lime is never used as text on a light background.
+
+  Token NAMES are the app's semantic roles (paper, sheet, ink, stamp…), so the
+  components did not have to change: only their values now carry the brand.
+  "stamp" = work the firm itself owes (filings, closing periods) = TARA green.
 */
 @theme {
-  --color-paper: #f2f4f1;
-  --color-sheet: #ffffff;
-  --color-ink: #1b2533;
-  --color-ink-muted: #5a6472;
-  --color-rule: #d5dad3;
+  /* Surfaces */
+  --color-paper: #f4f4f4; /* neutral-primary: page background */
+  --color-sheet: #fefefb; /* warm white: cards, inputs */
+  --color-stone: #eeede4; /* neutral-secondary: quiet bands */
 
+  /* Ink */
+  --color-ink: #002910; /* neutral-inverse */
+  --color-ink-muted: #516d5b; /* ink @ 68% (accessible variant of the site's 60%) */
+  --color-rule: #cdd2cc; /* ink @ 20% on warm white: borders (border-secondary) */
+  --color-rule-soft: #e6e8e3; /* ink @ 10%: dividers inside cards (border-primary) */
+
+  /* Brand accents */
+  --color-brand: #003d18; /* accent-primary */
+  --color-brand-hover: #005f25;
+  --color-lime: #defe52; /* accent-secondary — on brand green only */
+  --color-mint: #bdffd7; /* accent-tertiary */
+
+  /* Firm's own work (filings, closing periods): TARA green on a 10% green wash */
+  --color-stamp: #003d18;
+  --color-stamp-wash: #e6ece6;
+
+  /* Status (red / amber / green). Kept distinct from the brand green: the
+     status green is lighter and bluer so "on track" never reads as chrome. */
   --color-red: #a8261b;
   --color-red-wash: #f8e7e4;
   --color-amber: #9a5b00;
   --color-amber-wash: #fbf0dc;
-  --color-green: #2f6b45;
-  --color-green-wash: #e5f0e8;
+  --color-green: #237a57;
+  --color-green-wash: #e2f2ea;
 
-  --color-stamp: #3a4a9e;
-  --color-stamp-wash: #eceef8;
+  /* Typography */
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --tracking-brand: -0.01em; /* headings */
 
-  --font-sans: var(--font-fira), ui-sans-serif, system-ui, sans-serif;
+  /* Shape */
+  --radius-field: 0.75rem; /* inputs, tags */
+
+  /* Elevation (from the site's elevated cards) */
+  --shadow-card: 0 0 0 1px #09210f14 inset, 0 1px 2px #0000000d, 0 4px 10px #0000000f;
+  --shadow-raised: 0 0 0 1px #09210f33 inset, 0 2px 4px #0000001a, 0 8px 14px #00000026;
 }
 
+/* ─── Brand shapes ──────────────────────────────────────────────────────── */
+
+/* Buttons: square except the bottom-right corner. */
+@utility rounded-brand {
+  border-radius: 0 0 0.75rem 0;
+}
+
+/* Cards: soft corners with the big bottom-right sweep. */
+@utility rounded-card {
+  border-radius: 10px 10px 40px 10px;
+}
+
+/* Smaller cards / panels inside cards. */
+@utility rounded-card-sm {
+  border-radius: 8px 8px 20px 8px;
+}
+
+/* ─── Components (shared by dashboard, upload, review, accuracy) ─────────── */
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-brand bg-brand px-5 py-2.5 font-medium text-lime transition-colors hover:bg-brand-hover disabled:cursor-wait disabled:bg-ink-muted disabled:text-sheet;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-brand bg-transparent px-5 py-2.5 font-medium text-ink shadow-[inset_0_0_0_1px_var(--color-ink)] transition-colors hover:bg-stone;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-brand bg-transparent px-5 py-2.5 font-medium text-red shadow-[inset_0_0_0_1px_var(--color-red)] transition-colors hover:bg-red-wash;
+  }
+  .card {
+    @apply rounded-card border border-rule bg-sheet shadow-card;
+  }
+  .field {
+    @apply mt-1 block w-full rounded-field border border-rule bg-sheet px-3 py-2 text-ink placeholder:text-ink-muted;
+  }
+  .brand-link {
+    @apply font-medium text-brand underline decoration-brand/40 underline-offset-2 hover:decoration-brand;
+  }
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────── */
+
 body {
-  background: var(--color-paper);
+  background-color: var(--color-paper);
+  /* The site's faint dotted grid. Cards are opaque, so it only shows between them. */
+  background-image: radial-gradient(circle, #09210f14 1px, transparent 1.2px);
+  background-size: 22px 22px;
   color: var(--color-ink);
   font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: var(--tracking-brand);
+}
+
+/* Focus: a solid brand-green outline on every interactive element. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
 }

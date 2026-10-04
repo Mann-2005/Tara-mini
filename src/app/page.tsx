@@ -77,17 +77,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               type="date"
               name="asOf"
               defaultValue={asOf}
-              className="mt-1 block border border-rule bg-sheet px-2 py-1.5 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+              className="field w-auto py-1.5"
             />
           </label>
           <button
             type="submit"
-            className="bg-ink px-3 py-1.5 text-sm font-medium text-sheet hover:bg-stamp focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stamp"
+            className="btn-primary px-4 py-2 text-sm"
           >
             Show
           </button>
           {asOf !== today && (
-            <Link href="/" className="px-1 py-1.5 text-sm text-stamp underline underline-offset-2">
+            <Link href="/" className="brand-link px-1 py-1.5 text-sm">
               Back to today
             </Link>
           )}
