@@ -3,12 +3,16 @@
 // A Server Component that loads facts from Postgres and hands them to the
 // pure gap engine. It makes no decisions of its own: RAG status, timing,
 // owner and order all come from computeGaps, the unit-tested module.
+// The V2 insights (Compliance Score, VAT forecast, ghost invoices) come from
+// computeClientInsights in the same way.
 
 import Link from "next/link";
 import { parseIsoDate, type IsoDate } from "@/domain/calendar/isoDate";
+import { computeClientInsights } from "@/domain/analytics/insights";
 import { computeGaps, type ClientGaps, type Rag } from "@/domain/gaps/gapEngine";
 import { db } from "@/lib/db";
 import { todayInGermany } from "@/server/clock";
+import { loadInsightsInputs } from "@/server/analytics/loadInsightsInput";
 import { loadGapInput } from "@/server/gaps/loadGapInput";
 import { ClientBlock } from "./_components/ClientBlock";
 import { longDate } from "./_lib/format";
@@ -34,7 +38,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const today = todayInGermany();
   const asOf = validDate(asOfParam) ?? today;
 
-  const report = computeGaps(await loadGapInput(db, asOf));
+  const [gapInput, insightInputs] = await Promise.all([loadGapInput(db, asOf), loadInsightsInputs(db, asOf)]);
+  const report = computeGaps(gapInput);
+  const insights = new Map(insightInputs.map((input) => [input.client.id, computeClientInsights(input)]));
+  const ghostCount = [...insights.values()].reduce((n, i) => n + i.ghosts.reduce((m, g) => m + g.vendors.length, 0), 0);
   const byRag = (rag: Rag) => report.clients.filter((c) => c.rag === rag);
 
   const sections: { rag: Rag; title: string; blurb: string; clients: ClientGaps[] }[] = [
@@ -66,6 +73,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               {plural(sections[1].clients.length, "needs", "need")} attention and {sections[2].clients.length} on track.
               Clients owe {plural(clientItems, "delivery", "deliveries")}; the firm has{" "}
               {plural(filings, "filing", "filings")} to submit and {plural(toClose, "period", "periods")} to close.
+              {ghostCount > 0 && <> {plural(ghostCount, "expected recurring invoice has", "expected recurring invoices have")} not arrived yet.</>}
             </p>
           )}
         </div>
@@ -111,7 +119,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
                 <div className="space-y-4">
                   {s.clients.map((c) => (
-                    <ClientBlock key={c.clientId} client={c} />
+                    <ClientBlock key={c.clientId} client={c} insights={insights.get(c.clientId)} asOf={asOf} />
                   ))}
                 </div>
               </section>

@@ -1,8 +1,13 @@
-// One client on the dashboard: client-owed deliveries on the left,
-// the firm's own work (filings, closing periods) on the right.
+// One client on the dashboard: client-owed deliveries on the left, the firm's
+// own work (filings, closing periods) on the right, then the V2 insights:
+// Compliance Score (header pill), expected-but-missing recurring invoices
+// (in "Client owes") and the running VAT forecast (footer panel).
 
+import type { ClientInsights } from "@/domain/analytics/insights";
+import type { IsoDate } from "@/domain/calendar/isoDate";
 import type { ClientGaps, Gap, Rag } from "@/domain/gaps/gapEngine";
 import { dueText, gapAction, periodLabel, shortDate } from "../_lib/format";
+import { GhostRows, ScorePill, VatForecastPanel } from "./Insights";
 
 const RULE: Record<Rag, string> = {
   RED: "border-l-red",
@@ -51,46 +56,52 @@ function GapRow({ gap }: { gap: Gap }) {
   );
 }
 
-function Column({ heading, gaps, empty, firm }: { heading: string; gaps: Gap[]; empty: string; firm?: boolean }) {
+function Column({ heading, empty, firm, children }: { heading: string; empty: string; firm?: boolean; children: React.ReactNode[] }) {
+  const items = children.filter(Boolean);
   return (
     <div className={firm ? "bg-stamp-wash px-4 py-3 sm:px-5" : "px-4 py-3 sm:px-5"}>
       <h4 className={`text-sm font-semibold ${firm ? "text-stamp" : "text-ink-muted"}`}>{heading}</h4>
-      {gaps.length === 0 ? (
-        <p className="py-2.5 text-sm text-ink-muted">{empty}</p>
-      ) : (
-        <ul className="divide-y divide-rule-soft">
-          {gaps.map((g) => (
-            <GapRow key={g.obligationId} gap={g} />
-          ))}
-        </ul>
-      )}
+      {items.length === 0 ? <p className="py-2.5 text-sm text-ink-muted">{empty}</p> : <ul className="divide-y divide-rule-soft">{items}</ul>}
     </div>
   );
 }
 
-export function ClientBlock({ client }: { client: ClientGaps }) {
+export function ClientBlock({ client, insights, asOf }: { client: ClientGaps; insights?: ClientInsights; asOf: IsoDate }) {
   // Engine order (most urgent first) is preserved within each column.
   const clientOwes = client.gaps.filter((g) => g.owner === "CLIENT");
   const firmOwes = client.gaps.filter((g) => g.owner === "FIRM");
+  const ghosts = insights?.ghosts ?? [];
   const counts = countsLine(client.counts);
+  const hasRows = client.gaps.length > 0 || ghosts.length > 0;
 
   return (
     <article className={`card overflow-hidden border-l-4 ${RULE[client.rag]}`}>
-      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule-soft px-4 py-3 sm:px-5">
-        <h3 className="text-lg font-semibold">
-          {client.name} <span className="text-sm font-normal text-ink-muted">Client {client.clientNumber}</span>
-        </h3>
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-rule-soft px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h3 className="text-lg font-semibold">
+            {client.name} <span className="text-sm font-normal text-ink-muted">Client {client.clientNumber}</span>
+          </h3>
+          {insights && <ScorePill score={insights.score} />}
+        </div>
         {counts && <p className={`text-sm font-medium ${DUE_COLOUR[client.rag]}`}>{counts}</p>}
       </header>
 
-      {client.gaps.length === 0 ? (
-        <p className="px-4 py-3 text-sm text-ink-muted sm:px-5">Everything is in. No open obligations.</p>
-      ) : (
+      {hasRows ? (
         <div className="grid md:grid-cols-2">
-          <Column heading="Client owes" gaps={clientOwes} empty="Nothing outstanding from the client." />
-          <Column heading="Firm to do" gaps={firmOwes} empty="Nothing for the firm right now." firm />
+          <Column heading="Client owes" empty="Nothing outstanding from the client.">
+            {[...clientOwes.map((g) => <GapRow key={g.obligationId} gap={g} />), ghosts.length > 0 && <GhostRows key="ghosts" checks={ghosts} />]}
+          </Column>
+          <Column heading="Firm to do" empty="Nothing for the firm right now." firm>
+            {firmOwes.map((g) => (
+              <GapRow key={g.obligationId} gap={g} />
+            ))}
+          </Column>
         </div>
+      ) : (
+        <p className="px-4 py-3 text-sm text-ink-muted sm:px-5">Everything is in. No open obligations.</p>
       )}
+
+      {insights?.vat && <VatForecastPanel vat={insights.vat} asOf={asOf} />}
     </article>
   );
 }

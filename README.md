@@ -357,15 +357,24 @@ twice creates nothing new). Every seeded write is audited as `system:seed`, and
 seeded "model" proposals use `modelUsed = "seed-fixture"`, so they never pass for
 real model output. The accuracy page labels them "Sample data (seed)".
 
-### Seeded clients (anchor date 2 Oct 2026, periods Jul–Sep 2026)
+### Seeded clients (anchor date 2 Oct 2026)
 
-| No. | Client | Profile | Story on 2 Oct 2026 |
-| --- | --- | --- | --- |
-| 10001 | Bäckerei Müller GmbH | BY, monthly VAT, payroll | **Green**: fully up to date; September UStVA due Mon 12 Oct |
-| 10002 | Schmidt IT-Beratung | BE, quarterly VAT, no payroll | **Amber**: September bank statement uploaded but **not yet reviewed**, so still missing |
-| 10003 | Weber Bau GmbH | NW, monthly VAT, payroll, **Dauerfrist** | **Red**: August and September payroll data overdue |
-| 10004 | Physiotherapie Fischer | HH, **VAT-exempt**, payroll | **Amber**: August invoices received but the period isn't closed |
-| 10005 | Becker Online-Handel UG | BW, quarterly VAT, **Dauerfrist**, fiscal year ends June | **Green**: September due 5 Nov, Q3 UStVA due 10 Nov |
+The seed covers six months. **Jul–Sep 2026** is the live story on the dashboard.
+**Apr–Jun 2026** is generated, fully completed history: every obligation was
+delivered with that client's typical lateness, which feeds the Compliance Score.
+
+| No. | Client | Profile | Story on 2 Oct 2026 | Compliance Score | VAT forecast | Missing recurring invoice |
+| --- | --- | --- | --- | --- | --- | --- |
+| 10001 | Bäckerei Müller GmbH | BY, monthly VAT, payroll | **Green**: fully up to date; September UStVA due Mon 12 Oct | **A • 100** (always early) | Sep: Zahllast 727,00 | – |
+| 10002 | Schmidt IT-Beratung | BE, quarterly VAT, no payroll | **Amber**: September bank statement uploaded but **not yet reviewed**, so still missing | **B • 86** (2–4 days late) | Q3: Zahllast 5.586,00 | – |
+| 10003 | Weber Bau GmbH | NW, monthly VAT, payroll, **Dauerfrist** | **Red**: August and September payroll data overdue | **D • 39** (avg 20 days late) | Aug: Zahllast 3.792,40 | **Telefónica (O2), ~47,60** |
+| 10004 | Physiotherapie Fischer | HH, **VAT-exempt**, payroll | **Amber**: August invoices received but the period isn't closed | **C • 69** (1–2 weeks late) | none (VAT-exempt) | Physio-Bedarf Nord, ~285,60 |
+| 10005 | Becker Online-Handel UG | BW, quarterly VAT, **Dauerfrist**, fiscal year ends June | **Green**: September due 5 Nov, Q3 UStVA due 10 Nov | **A • 98** | Q3: **Guthaben** 684,00 | DHL Paket, ~1.249,50 |
+
+Only Weber's Telefónica gap was scripted. Fischer's and Becker's missing invoices
+are genuine detections: both clients sent an invoice from that supplier in July
+and August, and September's hasn't arrived. `pnpm insights 2026-10-02` prints all
+of this in the terminal.
 
 ### Synthetic sample documents (`pnpm samples`)
 
@@ -389,7 +398,7 @@ pnpm db:seed
 
 ## Stakeholder demo script
 
-About 20 minutes. Each step lists **what to do**, **what they'll see**, and **the
+About 25 minutes. Each step lists **what to do**, **what they'll see**, and **the
 point to make**.
 
 ### Before the demo
@@ -417,8 +426,8 @@ Check that `GOOGLE_GENERATIVE_AI_API_KEY` is set. Open
   chasing list, worst first."
 - Point at Weber: "Two months of payroll data are overdue. That's a phone call today."
 - Point at the two columns: "On the left, what the *client* owes us. On the right,
-  in blue, what *we* owe: a VAT filing, or closing a month whose invoices are in.
-  So we know who has to act."
+  on the green panel, what *we* owe: a VAT filing, or closing a month whose
+  invoices are in. So we know who has to act."
 
 ### 2. The tax rules are built in (4 min)
 
@@ -446,8 +455,8 @@ firm's own filing.
 
 **Say:** "The 'what's missing' answer is computed by plain, tested rules, never by
 AI. Same data, same date, same answer, every time. That's what makes it auditable.
-There are 137 automated tests behind it, including every weekend and holiday case
-we discussed."
+There are over 280 automated tests behind it, including every weekend and holiday
+case we discussed."
 
 ### 4. AI reads the documents, but only proposes (4 min)
 
@@ -497,7 +506,43 @@ and per field, type mix-ups, and the list of corrections.
   safely skip review for high-confidence documents. Until the data says so, we
   review everything."
 
-### 7. Compliance by construction (optional, 2 min)
+### 7. Beyond chasing: the intelligence layer (4 min)
+
+**Do:** back to the dashboard at `/?asOf=2026-10-02`.
+
+**Compliance Score.** Point at the pills next to each name: Weber **Grade D • 39**,
+Müller **Grade A • 100**. Hover a pill for the detail.
+- "This is how promptly each client has delivered over the last six months: an
+  average of 20 days late for Weber, always early for Müller. It's objective
+  evidence for the annual fee conversation (StBVV)."
+- "It only counts what the *client* owes, measured by when their documents
+  arrived. Our own filings and our staff's closing never lower a client's grade."
+
+**Missing recurring invoice.** Point at Weber's dashed row: *"Missing expected
+recurring invoice: Telefónica Germany GmbH & Co. OHG (~47,60 EUR)"*.
+- "Weber's O2 bill arrived in June, July and August. September's hasn't. The
+  system noticed before anyone closes the month, so we can ask now rather than
+  find out at year end."
+- "Nobody configured that. Fischer's and Becker's rows were found the same way,
+  from the documents alone. And it never changes a client's red/amber/green:
+  it's a prompt to ask, not a deadline."
+
+**VAT forecast.** Point at the panel at the bottom of each block: Weber owes an
+estimated **3.792,40 EUR** for August, while Becker gets **684,00 EUR back**
+for Q3 after a large stock purchase.
+- "Clients see the VAT bill coming before the return is filed, so it's not a
+  month-end shock."
+- "It's provisional, as the note says: it uses confirmed documents only and
+  assumes VAT follows the invoice date (Sollversteuerung)."
+
+**Time travel, again:** open `/?asOf=2026-09-15`. Müller's, Schmidt's and Becker's VAT panels
+switch to "Running total, counted until 15 Sep", and Schmidt's Hetzner invoice now shows
+as missing, because on that day it hadn't arrived.
+
+**Say:** "All three are plain, tested calculations: no AI. The AI only reads
+documents; everything you just saw is arithmetic you can check."
+
+### 8. Compliance by construction (optional, 2 min)
 
 **Do:** in a terminal:
 
@@ -513,7 +558,7 @@ docker exec tara-mini-db psql -U tara -d tara_mini -c 'UPDATE "AuditEvent" SET a
 application code that a bug could bypass. Every change is in an append-only
 audit log: who, what, when, old value, new value."
 
-### 8. Close with what's next (1 min)
+### 9. Close with what's next (1 min)
 
 - Login and access control, so every action is tied to a real person (GoBD).
 - A paid AI tier with a data processing agreement before any real client document.
