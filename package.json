@@ -20,7 +20,8 @@
     "gaps": "tsx scripts/gap-report.ts",
     "samples": "tsx scripts/make-samples.ts",
     "test:db": "vitest run --config vitest.db.config.mts",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "insights": "tsx scripts/insights-report.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.87",
