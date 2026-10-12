@@ -52,3 +52,10 @@ next-env.d.ts
 
 # generated synthetic test documents (pnpm samples)
 /samples
+
+# personal application documents (CVs, cover letters, memos): never publish
+/Mann_*
+*.aux
+*.synctex.gz
+*.fls
+*.fdb_latexmk
