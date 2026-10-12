@@ -12,7 +12,7 @@ one question, in real time and the same way every time:
 It also reads uploaded documents with an LLM. The LLM only ever *proposes* what a
 document is; a person confirms or corrects it before it counts towards anything.
 
-> **Status:** working prototype (steps 1–7 complete). Not ready for real client
+> **Status:** working prototype (steps 1–7 and V2 steps 1–4 complete). Not ready for real client
 > data. See [Before production](#before-production).
 
 ---
@@ -41,8 +41,8 @@ document is; a person confirms or corrects it before it counts towards anything.
 A free Google Gemini API key is needed only for document classification.
 
 ```bash
+cp .env.example .env      # defaults match docker-compose.yml (needed before install)
 pnpm install              # installs dependencies and generates the Prisma client
-cp .env.example .env      # defaults match docker-compose.yml
 pnpm db:up                # Postgres 16 on localhost:5433 (waits until healthy)
 pnpm db:migrate           # applies all migrations, incl. GoBD triggers
 pnpm db:seed              # 5 sample clients, obligations Jul–Sep 2026, document history
@@ -614,7 +614,8 @@ audit log: who, what, when, old value, new value."
 
 ## Branding
 
-The UI uses TARA's brand identity, taken from the design variables on taratax.ai:
+Tara Mini is an independent prototype, not an official TARA product. The UI uses
+TARA's brand identity, taken from the design variables on taratax.ai:
 forest green `#003d18` (primary), lime `#defe52` (accent, only on green), mint
 `#bdffd7`, ink `#002910`, page `#f4f4f4`, the **Public Sans** typeface, and the
 signature asymmetric corners (buttons rounded only bottom-right; cards 10/10/40/10px).
@@ -699,7 +700,7 @@ This prototype deliberately stops short of production. Before any real client da
 
 ## Project history
 
-Built in seven reviewed steps, one commit each:
+Built in seven reviewed steps, then four V2 steps, one commit each:
 
 | Commit | Step |
 | --- | --- |
@@ -714,4 +715,4 @@ Built in seven reviewed steps, one commit each:
 | `c9ea8a2` | V2.1 Pure analytics engines (Compliance Score, VAT forecast, missing recurring invoices) |
 | `69fa896` | V2.2 Demo scenarios in the seed, analytics loaders |
 | `c4e48c4` | V2.3 Intelligence layer on the dashboard |
-| (this commit) | V2.4 Eigenbeleg generator |
+| `13397ab` | V2.4 Eigenbeleg generator |
